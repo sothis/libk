@@ -1,0 +1,6 @@
+.gitattributes export-ignore
+.gitignore export-ignore
+.gitmodules export-ignore
+msys export-ignore
+msys.cmd export-ignore
+toolchain export-ignore

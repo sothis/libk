@@ -1,0 +1,3 @@
+[submodule "msys"]
+	path = msys
+	url = git://libk.org/msysenv.git

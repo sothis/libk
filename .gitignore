@@ -1,0 +1,9 @@
+build/*
+.DS_Store
+.gitconfig
+obj
+bin
+*.suo
+*.pidb
+*.userprefs
+*.pres

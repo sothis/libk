@@ -1,0 +1,5 @@
+All files in the libk source code distribution are published under CC0,
+exceptions are cleary marked as such. The CC0 Public Domain Dedication can be
+found under './doc/copying.txt'.
+If files do not contain a CC0 notice or another license text, they are
+published under CC0.
