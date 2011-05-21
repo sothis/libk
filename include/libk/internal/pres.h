@@ -142,30 +142,13 @@ struct pres_file_t {
 
 enum pres_structure_sizes_e {
 	sz_file_header = sizeof(struct pres_file_header_t),
+	sz_header_digest = sz_file_header - PRES_MAX_DIGEST_LENGTH,
 	sz_detached_hdr = sizeof(struct pres_detached_header_t),
+	sz_dheader_digest = sz_detached_hdr - PRES_MAX_DIGEST_LENGTH,
 	sz_res_tbl = sizeof(struct pres_resource_table_t),
+	sz_rtbl_digest = sz_res_tbl - PRES_MAX_DIGEST_LENGTH,
 	sz_res_tbl_entry = sizeof(struct pres_resource_table_entry_t),
-};
-
-/* version dependent sizes without terminatory digest */
-static const size_t sz_header_digest[] = {
-	sz_file_header - PRES_MAX_DIGEST_LENGTH,
-	0
-};
-
-static const size_t sz_dheader_digest[] = {
-	sz_detached_hdr - PRES_MAX_DIGEST_LENGTH,
-	0
-};
-
-static const size_t sz_rtbl_digest[] = {
-	sz_res_tbl - PRES_MAX_DIGEST_LENGTH,
-	0
-};
-
-static const size_t sz_rtblentry_digest[] = {
-	sz_res_tbl_entry - PRES_MAX_DIGEST_LENGTH,
-	0
+	sz_rtblentry_digest = sz_res_tbl_entry - PRES_MAX_DIGEST_LENGTH,
 };
 
 

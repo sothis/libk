@@ -225,7 +225,7 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	pf->rtbl->string_pool_start = pf->cur_stringpoolstart;
 	pf->rtbl->string_pool_size = pf->cur_stringpoolsize;
 
-	k_hash_update(skein512, &pf->hdr, sz_header_digest[pf->hdr.version]);
+	k_hash_update(skein512, &pf->hdr, sz_header_digest);
 	k_hash_final(skein512, pf->hdr.digest);
 	if (lseek(pf->fd, 0, SEEK_SET) == -1)
 		goto err_out;
@@ -234,7 +234,7 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 		goto err_out;
 
 	k_hash_reset(skein512);
-	k_hash_update(skein512, &pf->dhdr, sz_dheader_digest[pf->hdr.version]);
+	k_hash_update(skein512, &pf->dhdr, sz_dheader_digest);
 	k_hash_final(skein512, pf->dhdr.digest);
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
 		goto err_out;
@@ -249,12 +249,12 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 		goto err_out;
 
 	k_hash_reset(skein512);
-	k_hash_update(skein512, pf->rtbl, sz_rtbl_digest[pf->hdr.version]);
+	k_hash_update(skein512, pf->rtbl, sz_rtbl_digest);
 	k_hash_final(skein512, pf->rtbl->digest);
 	for (size_t i = 0; i < pf->rtbl->entries; ++i) {
 		k_hash_reset(skein512);
 		k_hash_update(skein512, &pf->rtbl->table[i],
-			sz_rtblentry_digest[pf->hdr.version]);
+			sz_rtblentry_digest);
 		k_hash_final(skein512, pf->rtbl->table[i].digest);
 	}
 
