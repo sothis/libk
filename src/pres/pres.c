@@ -307,10 +307,51 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		return -1;
 	}
 
+	if (st.st_size < sz_file_header) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+
 	struct mmap_t map;
 	pres_map(&map, pf->fd, sz_file_header, 0);
 	memcpy(&pf->hdr, map.mem, sz_file_header);
 	pres_unmap(&map);
+	if (pf->hdr.magic != PRES_MAGIC) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+	/* currently no back and forward compatibility */
+	if (pf->hdr.version != PRES_VER) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+	if (pf->hdr.filesize != st.st_size) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+	if (!pf->hdr.hashfunction ||
+	pf->hdr.hashfunction > HASHSUM_MAX_SUPPORT) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+	if (!pf->hdr.hashsize ||
+	pf->hdr.hashsize > PRES_MAX_DIGEST_LENGTH*8) {
+		close(pf->fd);
+		errno = EINVAL;
+		return -1;
+	}
+
+	pf->hash = k_hash_init(pf->hdr.hashfunction, pf->hdr.hashsize);
+	if (!pf->hash) {
+		close(pf->fd);
+		return -1;
+	}
+
 
 	pres_map(&map, pf->fd, pf->hdr.detached_header_size,
 		pf->hdr.detached_header_start);
@@ -363,6 +404,6 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 	close(pf->fd);
 	pool_free(&pf->stringpool);
 	free(pf->rtbl);
-
+	k_hash_finish(pf->hash);
 	return 0;
 }

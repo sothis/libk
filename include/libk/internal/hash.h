@@ -31,7 +31,7 @@ extern void k_hash_update
 extern void k_hash_final
 (k_hash_t* c, void* output);
 
-extern size_t k_hash_digest_size
+extern uint32_t k_hash_digest_size
 (k_hash_t* c);
 
 
