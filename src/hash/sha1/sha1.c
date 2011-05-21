@@ -1,3 +1,17 @@
+/*
+ * sha1.c
+ *
+ * 1998, Steve Reid <sreid@sea-to-sky.net>
+ * 1998, James H. Brown <jbrown@burgoyne.com>
+ * 2001, Saul Kravitz <Saul.Kravitz@celera.com>
+ * 2002, Ralph Giles <giles@ghostscript.com>
+ * 2011, Janos Laube <janos.dev@gmail.com>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+*/
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

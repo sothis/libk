@@ -1,5 +1,21 @@
-All files in the libk source code distribution are published under CC0,
-exceptions are cleary marked as such. The CC0 Public Domain Dedication can be
+All files in the libk source code distribution, being the libk source code
+repository maintained by Janos Laube <janos.dev@gmail.com>, are published and
+distributed with respect to the terms of the Creative Commons CC0 Public Domain
+Dedication.
+
+If files do not contain a CC0 notice or any other license text, they are
+published and distributed under CC0. The CC0 Public Domain Dedication can be
 found under './doc/copying.txt'.
-If files do not contain a CC0 notice or another license text, they are
-published under CC0.
+
+Files in the source code distribution that are published under another license,
+have the license text included. If you use, modify or distribute that specific
+code you must comply with that particular license. If you don't want to,
+just exclude the respective code, in source or binary forms, from your
+distribution or implementation. Files containing such non-CC0 code are listed
+at the end of this file.
+
+
+libk CC0 exceptions:
+
+ - Mersenne Twister, 32 bit word size
+	./src/prng/mt19937.c			[3-clause BSD license]

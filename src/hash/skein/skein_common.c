@@ -1,3 +1,17 @@
+/*
+ * skein_common.c
+ *
+ * 2008, Doug Whiting <doug.whiting@exar.com>
+ * 2011, Janos Laube <janos.dev@gmail.com>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+*/
+
+/* This implementation is the straight hash algorithm only, based on Doug
+ * Whiting's Skein reference implementation. */
+
 #include <string.h>
 #include "skein.h"
 #include "utils/endian-neutral.h"

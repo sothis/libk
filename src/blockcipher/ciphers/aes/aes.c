@@ -1,3 +1,16 @@
+/*
+ * aes.c
+ *
+ * 2000, Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>
+ * 2000, Antoon Bosselaers <antoon.bosselaers@esat.kuleuven.ac.be>
+ * 2000, Paulo Barreto <paulo.barreto@terra.com.br>
+ * 2011, Janos Laube <janos.dev@gmail.com>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+*/
+
 #include "../blockcipher_desc.h"
 #include "utils/unittest_desc.h"
 #include "utils/endian-neutral.h"
