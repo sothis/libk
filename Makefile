@@ -350,8 +350,6 @@ endif
 	@-mkdir -p $(dir $(@))
 ifdef PLAT_DARWIN
 	$(LD) -fPIC -dynamiclib						\
-		-current_version $(VERSION)				\
-		-compatibility_version 0.0.1				\
 		-install_name "@rpath/$(notdir $(@))"			\
 		-undefined dynamic_lookup $(MACARCHS) $(LDFLAGS)	\
 		$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
