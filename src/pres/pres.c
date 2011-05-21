@@ -287,9 +287,11 @@ out:
 	return res;
 }
 
-/* TODO: add verifications, like filesize, offsets, filemagic, etc. */
+/* TODO: check offset+size against filesize, don't forget overflow checking */
 __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 {
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+
 	memset(pf, 0, sizeof(struct pres_file_t));
 	pf->fd = open(name, O_RDONLY);
 	if (pf->fd == -1)
@@ -352,11 +354,27 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		return -1;
 	}
 
+	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
+	k_hash_final(pf->hash, digest_chk);
+	if (memcmp(pf->hdr.digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
+		k_hash_finish(pf->hash);
+		close(pf->fd);
+		return -1;
+	}
 
 	pres_map(&map, pf->fd, pf->hdr.detached_header_size,
 		pf->hdr.detached_header_start);
 	memcpy(&pf->dhdr, map.mem, pf->hdr.detached_header_size);
 	pres_unmap(&map);
+
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
+	k_hash_final(pf->hash, digest_chk);
+	if (memcmp(pf->dhdr.digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
+		k_hash_finish(pf->hash);
+		close(pf->fd);
+		return -1;
+	}
 
 	pres_map(&map, pf->fd, pf->dhdr.resource_table_size,
 		pf->dhdr.resource_table_start);
@@ -374,11 +392,53 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
 	pres_unmap(&map);
 
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
+	k_hash_final(pf->hash, digest_chk);
+	if (memcmp(pf->rtbl->digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
+		k_hash_finish(pf->hash);
+		free(pf->rtbl);
+		close(pf->fd);
+		return -1;
+	}
+
 	pool_alloc(&pf->stringpool, 0);
 	pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
 		pf->rtbl->string_pool_start);
 	pool_append(&pf->stringpool, map.mem, pf->rtbl->string_pool_size);
 	pres_unmap(&map);
+
+	uint64_t i = 0, e = pf->rtbl->entries;
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+	for (i = 0; i < e; ++i) {
+		size_t fn_off = table[i].filename_offset;
+		const char* fn = pool_getmem(&pf->stringpool, fn_off);
+		size_t fns = strlen(fn)+1;
+
+		k_hash_reset(pf->hash);
+		k_hash_update(pf->hash, &table[i], sz_rtblentry_digest);
+		k_hash_final(pf->hash, digest_chk);
+		if (memcmp(table[i].digest, digest_chk,
+		(pf->hdr.hashsize + 7) / 8)) {
+			k_hash_finish(pf->hash);
+			free(pf->rtbl);
+			pool_free(&pf->stringpool);
+			close(pf->fd);
+			return -1;
+		}
+
+		k_hash_reset(pf->hash);
+		k_hash_update(pf->hash, fn, fns);
+		k_hash_final(pf->hash, digest_chk);
+		if (memcmp(table[i].filename_digest, digest_chk,
+		(pf->hdr.hashsize + 7) / 8)) {
+			k_hash_finish(pf->hash);
+			free(pf->rtbl);
+			pool_free(&pf->stringpool);
+			close(pf->fd);
+			return -1;
+		}
+	}
 
 	return 0;
 }
