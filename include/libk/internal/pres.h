@@ -39,8 +39,8 @@ struct pres_file_header_t {
 	/* used hashfunction and digestsize, _all_ digests are calculated
 	 * with that function. NOTE: string digests are calculated including
 	 * the terminating zero byte. */
-//	uint32_t	hashfunction;
-//	uint32_t	hashsize;
+	uint32_t	hashfunction;
+	uint32_t	hashsize;
 	/* if set, _all_ entities have to be signed */
 //	uint32_t	pres_signed;
 	/* used cipher. when not encrypted, set to 0. if set, _all_ entities
@@ -137,6 +137,7 @@ struct mmap_t {
 struct pres_file_t {
 	int				fd;
 	int				is_corrupt;
+	k_hash_t*			hash;
 	size_t				cur_filesize;
 	size_t				cur_rtbl_start;
 	size_t				cur_resentries;
@@ -172,7 +173,8 @@ enum pres_structure_sizes_e {
  * with SIGKILL and friends. then there might exist some stale temporary files
  * in the current working directory. in that case the existing container
  * (if any) is still in the state like it was before invoking pres_create(). */
-extern int k_pres_create(struct pres_file_t* pf, const char* name);
+extern int k_pres_create
+(struct pres_file_t* pf, const char* name, enum hashsum_e hashsum);
 
 /* adds an existing file to the resource container, might fail, but leaves
  * state untouched in that case, so that a consecutive call with another file

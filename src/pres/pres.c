@@ -53,20 +53,33 @@ static int pres_unmap(struct mmap_t* res)
 	return munmap(res->mem - res->off, res->len);
 }
 
-__export_function int k_pres_create(struct pres_file_t* pf, const char* name)
+__export_function int k_pres_create
+(struct pres_file_t* pf, const char* name, enum hashsum_e hashsum)
 {
 	memset(pf, 0, sizeof(struct pres_file_t));
+
+	if (!hashsum) {
+		errno = EINVAL;
+		return -1;
+	}
+	pf->hash = k_hash_init(hashsum, 0);
+	if (!pf->hash)
+		return -1;
 
 #ifdef NDEBUG
 	pf->fd = tcreat(name, 0400);
 #else
 	pf->fd = tcreat(name, 0600);
 #endif
-	if (pf->fd == -1)
+	if (pf->fd == -1) {
+		k_hash_finish(pf->hash);
 		return -1;
+	}
 
 	pf->hdr.magic = PRES_MAGIC;
 	pf->hdr.version = PRES_VER;
+	pf->hdr.hashfunction = hashsum;
+	pf->hdr.hashsize = k_hash_digest_size(pf->hash);
 	pf->hdr.detached_header_size = sz_detached_hdr;
 	pf->hdr.detached_header_start = sz_file_header;
 
@@ -75,6 +88,7 @@ __export_function int k_pres_create(struct pres_file_t* pf, const char* name)
 	pf->rtbl = calloc(1, sz_res_tbl);
 	if (!pf->rtbl) {
 		trollback_and_close(pf->fd);
+		k_hash_finish(pf->hash);
 		return -1;
 	}
 
@@ -90,6 +104,7 @@ __export_function int k_pres_create(struct pres_file_t* pf, const char* name)
 	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1) {
 		trollback_and_close(pf->fd);
 		free(pf->rtbl);
+		k_hash_finish(pf->hash);
 		return -1;
 	}
 
@@ -115,23 +130,17 @@ static int pres_rollback(struct pres_file_t* pf, size_t ssize)
 
 __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 {
-	k_hash_t* skein512 = 0;
 	uint8_t buf[32768];
 	size_t filebytes = 0;
 	size_t namelen = strlen(name)+1;
 
-	skein512 = k_hash_init(HASHSUM_SKEIN_512, 512);
-	if (!skein512)
-		goto unrecoverable_err;
-
 	if (pf->is_corrupt) {
 		errno = EINVAL;
-		goto err;
+		goto unrecoverable_err;
 	}
 
 	int fd = open(name, O_RDONLY | O_NOATIME);
 	if (fd == -1) {
-		k_hash_finish(skein512);
 		return 1;
 	}
 
@@ -147,10 +156,11 @@ __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 	pf->rtbl = temp;
 	memset(&pf->rtbl->table[pf->cur_resentries], 0, sz_res_tbl_entry);
 
+	k_hash_reset(pf->hash);
 	ssize_t nread;
 	while ((nread = read(fd, buf, 32768)) > 0) {
 		ssize_t nwritten, total = 0;
-		k_hash_update(skein512, buf, nread);
+		k_hash_update(pf->hash, buf, nread);
 		while (total != nread) {
 			nwritten = write(pf->fd, buf + total, nread - total);
 			if (nwritten < 0) {
@@ -165,7 +175,6 @@ __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 		close(fd);
 		if (pres_rollback(pf, namelen))
 			goto unrecoverable_err;
-		k_hash_finish(skein512);
 		return 1;
 	}
 	if(close(fd))
@@ -176,12 +185,12 @@ __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 
 	pf->cur_resentries++;
 
-	k_hash_final(skein512,
+	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].data_digest);
 
-	k_hash_reset(skein512);
-	k_hash_update(skein512, name, namelen);
-	k_hash_final(skein512,
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, name, namelen);
+	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].filename_digest);
 
 	pf->rtbl->table[pf->cur_resentries-1].id = pf->cur_resentries;
@@ -201,31 +210,21 @@ __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 	pf->cur_filesize = pf->cur_rtbl_start + pf->dhdr.resource_table_size +
 		pf->cur_resentries*sz_res_tbl_entry;
 
-
-	k_hash_finish(skein512);
 	return 0;
 unrecoverable_err:
 	pf->is_corrupt = 1;
-err:
-	if (skein512)
-		k_hash_finish(skein512);
 	return -1;
 }
 
 __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 {
 	size_t s;
-	k_hash_t* skein512 = 0;
 	int res = 0;
 
 	if (pf->is_corrupt) {
 		errno = EINVAL;
 		goto err_out;
 	}
-
-	skein512 = k_hash_init(HASHSUM_SKEIN_512, 512);
-	if (!skein512)
-		goto err_out;
 
 	pf->hdr.filesize = pf->cur_filesize;
 	pf->dhdr.resource_table_start = pf->cur_rtbl_start;
@@ -235,17 +234,18 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	pf->rtbl->string_pool_start = pf->cur_stringpoolstart;
 	pf->rtbl->string_pool_size = pf->cur_stringpoolsize;
 
-	k_hash_update(skein512, &pf->hdr, sz_header_digest);
-	k_hash_final(skein512, pf->hdr.digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
+	k_hash_final(pf->hash, pf->hdr.digest);
 	if (lseek(pf->fd, 0, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_file_header;
 	if (write(pf->fd, &pf->hdr, s) != s)
 		goto err_out;
 
-	k_hash_reset(skein512);
-	k_hash_update(skein512, &pf->dhdr, sz_dheader_digest);
-	k_hash_final(skein512, pf->dhdr.digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
+	k_hash_final(pf->hash, pf->dhdr.digest);
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_detached_hdr;
@@ -258,14 +258,14 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	if (write(pf->fd, pf->stringpool.base, s) != s)
 		goto err_out;
 
-	k_hash_reset(skein512);
-	k_hash_update(skein512, pf->rtbl, sz_rtbl_digest);
-	k_hash_final(skein512, pf->rtbl->digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
+	k_hash_final(pf->hash, pf->rtbl->digest);
 	for (size_t i = 0; i < pf->rtbl->entries; ++i) {
-		k_hash_reset(skein512);
-		k_hash_update(skein512, &pf->rtbl->table[i],
+		k_hash_reset(pf->hash);
+		k_hash_update(pf->hash, &pf->rtbl->table[i],
 			sz_rtblentry_digest);
-		k_hash_final(skein512, pf->rtbl->table[i].digest);
+		k_hash_final(pf->hash, pf->rtbl->table[i].digest);
 	}
 
 	if (lseek(pf->fd, pf->dhdr.resource_table_start, SEEK_SET) == -1)
@@ -281,8 +281,7 @@ err_out:
 	trollback_and_close(pf->fd);
 	res = -1;
 out:
-	if (skein512)
-		k_hash_finish(skein512);
+	k_hash_finish(pf->hash);
 	pool_free(&pf->stringpool);
 	free(pf->rtbl);
 	return res;
