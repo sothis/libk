@@ -1,5 +1,5 @@
 /*
- * dumphx.h
+ * libk - dumphx.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

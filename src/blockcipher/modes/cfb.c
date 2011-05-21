@@ -1,5 +1,5 @@
 /*
- * cfb.c
+ * libk - cfb.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

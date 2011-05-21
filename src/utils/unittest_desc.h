@@ -1,5 +1,5 @@
 /*
- * unittest_desc.h
+ * libk - unittest_desc.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

@@ -1,5 +1,5 @@
 /*
- * skein256.c
+ * libk - skein256.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

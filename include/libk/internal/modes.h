@@ -1,5 +1,5 @@
 /*
- * modes.h
+ * libk - modes.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

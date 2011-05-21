@@ -1,5 +1,5 @@
 /*
- * arc4.c
+ * libk - arc4.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

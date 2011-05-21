@@ -1,5 +1,5 @@
 /*
- * Mt19937_32Test.cs
+ * libk - Mt19937_32Test.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

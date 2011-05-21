@@ -1,5 +1,5 @@
 /*
- * mempool.c
+ * libk - mempool.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

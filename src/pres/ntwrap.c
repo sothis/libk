@@ -1,5 +1,5 @@
 /*
- * ntwrap.c
+ * libk - ntwrap.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

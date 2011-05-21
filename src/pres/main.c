@@ -1,5 +1,5 @@
 /*
- * main.c
+ * pres - main.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

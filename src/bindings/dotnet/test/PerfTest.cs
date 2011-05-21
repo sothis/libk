@@ -1,5 +1,5 @@
 /*
- * PerfTest.cs
+ * libk - PerfTest.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

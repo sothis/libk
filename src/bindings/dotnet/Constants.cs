@@ -1,5 +1,5 @@
 /*
- * Constants.cs
+ * libk - Constants.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

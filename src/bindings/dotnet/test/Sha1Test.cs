@@ -1,5 +1,5 @@
 /*
- * Sha1Test.cs
+ * libk - Sha1Test.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

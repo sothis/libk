@@ -1,5 +1,5 @@
 /*
- * hashsums.h
+ * libk - hashsums.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

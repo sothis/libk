@@ -1,5 +1,5 @@
 /*
- * errors.h
+ * libk - errors.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

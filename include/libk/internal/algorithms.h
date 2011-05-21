@@ -1,5 +1,5 @@
 /*
- * algorithms.h
+ * libk - algorithms.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

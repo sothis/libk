@@ -1,5 +1,5 @@
 /*
- * AssemblyInfo.cs
+ * libk - AssemblyInfo.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

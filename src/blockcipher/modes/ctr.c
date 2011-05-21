@@ -1,5 +1,5 @@
 /*
- * ctr.c
+ * libk - ctr.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

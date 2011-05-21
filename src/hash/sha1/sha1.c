@@ -1,5 +1,5 @@
 /*
- * sha1.c
+ * libk - sha1.c
  *
  * 1998, Steve Reid <sreid@sea-to-sky.net>
  * 1998, James H. Brown <jbrown@burgoyne.com>

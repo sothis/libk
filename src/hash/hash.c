@@ -1,5 +1,5 @@
 /*
- * hash.c
+ * libk - hash.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

@@ -1,5 +1,5 @@
 /*
- * blockcipher.c
+ * libk - blockcipher.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

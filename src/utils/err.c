@@ -1,5 +1,5 @@
 /*
- * err.c
+ * libk - err.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

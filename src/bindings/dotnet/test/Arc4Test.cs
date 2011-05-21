@@ -1,5 +1,5 @@
 /*
- * Arc4Test.cs
+ * libk - Arc4Test.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

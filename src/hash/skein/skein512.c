@@ -1,5 +1,5 @@
 /*
- * skein512.c
+ * libk - skein512.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

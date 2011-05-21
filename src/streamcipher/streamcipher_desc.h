@@ -1,5 +1,5 @@
 /*
- * streamcipher_desc.h
+ * libk - streamcipher_desc.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

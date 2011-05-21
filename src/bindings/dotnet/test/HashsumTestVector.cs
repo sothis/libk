@@ -1,5 +1,5 @@
 /*
- * HashsumTestVector.cs
+ * libk - HashsumTestVector.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

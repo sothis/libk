@@ -1,5 +1,5 @@
 /*
- * pres.c
+ * libk - pres.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

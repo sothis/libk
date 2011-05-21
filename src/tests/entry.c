@@ -1,5 +1,5 @@
 /*
- * entry.c
+ * libk - entry.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

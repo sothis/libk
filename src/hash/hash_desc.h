@@ -1,5 +1,5 @@
 /*
- * hash_desc.h
+ * libk - hash_desc.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

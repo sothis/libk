@@ -1,5 +1,5 @@
 /*
- * Streamcipher.cs
+ * libk - Streamcipher.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

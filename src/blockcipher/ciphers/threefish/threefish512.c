@@ -1,5 +1,5 @@
 /*
- * threefish512.c
+ * libk - threefish512.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

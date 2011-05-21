@@ -1,5 +1,5 @@
 /*
- * mem.c
+ * libk - mem.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

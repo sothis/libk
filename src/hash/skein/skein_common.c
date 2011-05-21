@@ -1,5 +1,5 @@
 /*
- * skein_common.c
+ * libk - skein_common.c
  *
  * 2008, Doug Whiting <doug.whiting@exar.com>
  * 2011, Janos Laube <janos.dev@gmail.com>

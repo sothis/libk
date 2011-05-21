@@ -1,5 +1,5 @@
 /*
- * StreamcipherTestVector.cs
+ * libk - StreamcipherTestVector.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

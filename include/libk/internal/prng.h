@@ -1,5 +1,5 @@
 /*
- * prng.h
+ * libk - prng.h
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

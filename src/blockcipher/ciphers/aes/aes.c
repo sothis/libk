@@ -1,5 +1,5 @@
 /*
- * aes.c
+ * libk - aes.c
  *
  * 2000, Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>
  * 2000, Antoon Bosselaers <antoon.bosselaers@esat.kuleuven.ac.be>
