@@ -151,6 +151,12 @@ struct pres_file_t {
 	struct pres_resource_table_t*	rtbl;
 };
 
+struct pres_res_t {
+	struct mmap_t	map;
+	uint64_t	absoff;
+	uint64_t	size;
+};
+
 enum pres_structure_sizes_e {
 	sz_file_header = sizeof(struct pres_file_header_t),
 	sz_header_digest = sz_file_header - PRES_MAX_DIGEST_LENGTH,

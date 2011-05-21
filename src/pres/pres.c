@@ -459,6 +459,21 @@ __export_function int k_pres_list(struct pres_file_t* pf)
 	return 0;
 }
 
+__export_function uint64_t k_pres_res_count(struct pres_file_t* pf)
+{
+	return pf->rtbl->entries;
+}
+
+__export_function void k_pres_res_by_id
+(struct pres_file_t* pf, struct pres_res_t* res, uint64_t id)
+{
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+
+	memset(&res->map, 0, sizeof(struct mmap_t));
+	res->size = table[id-1].data_size;
+	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
+}
+
 __export_function int k_pres_close(struct pres_file_t* pf)
 {
 	close(pf->fd);
