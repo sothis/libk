@@ -8,3 +8,6 @@ with gnupg via:
 This key is not signed by a trusted third party yet. The fingerprint is:
 
 	9220 d2b6 7c2d 4fc8 811a 32e7 d34e 7cb4 9f2d 89fc
+
+Note that all versions prior to version 1.0.0 are _not_ considered as API and
+ABI stable.
