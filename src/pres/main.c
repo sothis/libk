@@ -20,7 +20,7 @@
 #include <ftw.h>
 #define MKDIR_MODE ,0700
 #else
-#include "ntwrap.h"
+#include "utils/ntwrap.h"
 #define MKDIR_MODE
 #endif
 
