@@ -400,8 +400,15 @@ out:
 	return res;
 }
 
-/* TODO: check offset+size against filesize, don't forget overflow checking */
-__export_function int k_pres_open(struct pres_file_t* pf, const char* name)
+/* TODO:
+ * - check offset+size against filesize, don't forget overflow checking
+ * - if some digest checks fail, it might be still possible to access a valid
+ *   resource. only if the entry in the resource table is corrupt we consider
+ *   the resource as unaccessible
+ * - cleanup error handling
+ * */
+__export_function int k_pres_open
+(struct pres_file_t* pf, const char* name, const void* key)
 {
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 
@@ -475,10 +482,32 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		return -1;
 	}
 
-	pres_map(&map, pf->fd, pf->hdr.detached_header_size,
-		pf->hdr.detached_header_start);
-	memcpy(&pf->dhdr, map.mem, pf->hdr.detached_header_size);
+	/* following entities might be encrypted */
+	if (pf->hdr.cipher) {
+		if (pf->hdr.ciphermode)
+			pf->scipher = k_sc_init_with_blockcipher(pf->hdr.cipher,
+				pf->hdr.ciphermode, 0);
+		else
+			pf->scipher = k_sc_init(pf->hdr.cipher);
+
+		if (!pf->scipher ||
+		k_sc_set_key(pf->scipher, key, pf->hdr.keysize)) {
+			k_hash_finish(pf->hash);
+			close(pf->fd);
+			if (pf->scipher)
+				k_sc_finish(pf->scipher);
+			return -1;
+		}
+	}
+
+	pres_map(&map, pf->fd, sz_detached_hdr, sz_file_header);
+	memcpy(&pf->dhdr, map.mem, sz_detached_hdr);
 	pres_unmap(&map);
+
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, pf->hdr.detached_header_iv);
+		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, sz_detached_hdr);
+	}
 
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
@@ -486,24 +515,39 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 	if (memcmp(pf->dhdr.digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
 		k_hash_finish(pf->hash);
 		close(pf->fd);
+		if (pf->scipher)
+			k_sc_finish(pf->scipher);
 		return -1;
 	}
 
-	pres_map(&map, pf->fd, pf->dhdr.resource_table_size,
-		pf->dhdr.resource_table_start);
-	struct pres_resource_table_t* rtbl = map.mem;
-	uint64_t entries = rtbl->entries;
+	pf->rtbl = calloc(1, sz_res_tbl);
+	pres_map(&map, pf->fd, sz_res_tbl, pf->dhdr.resource_table_start);
+	memcpy(pf->rtbl, map.mem, sz_res_tbl);
 	pres_unmap(&map);
+
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, pf->dhdr.resource_table_iv);
+		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, sz_res_tbl);
+	}
+
+	uint64_t entries = pf->rtbl->entries;
+	free(pf->rtbl);
 
 	pres_map(&map, pf->fd,
 		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry,
 		pf->dhdr.resource_table_start);
-	rtbl = map.mem;
 	pf->rtbl = calloc(1,
 		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
-	memcpy(pf->rtbl, rtbl,
+	memcpy(pf->rtbl, map.mem,
 		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
 	pres_unmap(&map);
+
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, pf->dhdr.resource_table_iv);
+		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl,
+			pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
+	}
+
 
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
@@ -512,6 +556,8 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		k_hash_finish(pf->hash);
 		free(pf->rtbl);
 		close(pf->fd);
+		if (pf->scipher)
+			k_sc_finish(pf->scipher);
 		return -1;
 	}
 
@@ -520,6 +566,12 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 		pf->rtbl->string_pool_start);
 	pool_append(&pf->stringpool, map.mem, pf->rtbl->string_pool_size);
 	pres_unmap(&map);
+
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, pf->rtbl->string_pool_iv);
+		k_sc_update(pf->scipher, pf->stringpool.base,
+			pf->stringpool.base, pf->stringpool.data_size);
+	}
 
 	uint64_t i = 0, e = pf->rtbl->entries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
@@ -537,6 +589,8 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 			free(pf->rtbl);
 			pool_free(&pf->stringpool);
 			close(pf->fd);
+			if (pf->scipher)
+				k_sc_finish(pf->scipher);
 			return -1;
 		}
 
@@ -549,6 +603,8 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 			free(pf->rtbl);
 			pool_free(&pf->stringpool);
 			close(pf->fd);
+			if (pf->scipher)
+				k_sc_finish(pf->scipher);
 			return -1;
 		}
 	}
@@ -629,6 +685,8 @@ __export_function void k_pres_res_unmap
 
 __export_function int k_pres_close(struct pres_file_t* pf)
 {
+	if (pf->scipher)
+		k_sc_finish(pf->scipher);
 	close(pf->fd);
 	pool_free(&pf->stringpool);
 	free(pf->rtbl);

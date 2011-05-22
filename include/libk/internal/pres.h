@@ -219,7 +219,8 @@ extern int k_pres_add_file
 extern int k_pres_commit_and_close(struct pres_file_t* pf);
 
 /* opens existing container */
-extern int k_pres_open(struct pres_file_t* pf, const char* name);
+extern int k_pres_open
+(struct pres_file_t* pf, const char* name, const void* key);
 
 /* closes open container */
 extern int k_pres_close(struct pres_file_t* pf);

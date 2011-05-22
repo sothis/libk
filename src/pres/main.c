@@ -97,7 +97,7 @@ static int import_directory(const char* directory, const char* filename)
 		.name		= filename,
 		.hashsum 	= HASHSUM_SKEIN_1024,
 		.hashsize	= 1024,
-#if 0
+#if 1
 		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
 		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
 		.keysize	= 1024,
@@ -153,7 +153,12 @@ static void create_dirs(const char* path)
 
 static int export_all(const char* filename, const char* dir)
 {
-	if (k_pres_open(&_cur_pres, filename)) {
+	const char* key =	"00000000000000000000000000000000"
+				"00000000000000000000000000000000"
+				"00000000000000000000000000000000"
+				"00000000000000000000000000000000";
+
+	if (k_pres_open(&_cur_pres, filename, key)) {
 		perror("pres_open");
 		return -1;
 	}
