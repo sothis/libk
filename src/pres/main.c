@@ -109,7 +109,7 @@ static int import_directory(const char* directory, const char* filename)
 
 static void create_dirs(const char* path)
 {
-	char* cur = get_current_dir_name();
+	char* cur = getcwd(0, 0);
 	char* p = calloc(strlen(path)+1, sizeof(char));
 	strcpy(p, path);
 
