@@ -53,6 +53,7 @@ static int pres_unmap(struct mmap_t* res)
 	return munmap(res->mem - res->off, res->len);
 }
 
+/* TODO: cleanup error handling here */
 __export_function int k_pres_create
 (struct pres_file_t* pf, struct pres_options_t* opt)
 {
@@ -168,6 +169,16 @@ __export_function int k_pres_add_file
 {
 	uint8_t buf[32768];
 	size_t filebytes = 0;
+	/* TODO: retrieve random nonce here */
+	uint8_t data_nonce[128] =	"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000";
+
+	if (pf->is_corrupt) {
+		errno = EINVAL;
+		goto unrecoverable_err;
+	}
 
 	/* strip leading '.' and '/' components */
 	size_t name_off = 0;
@@ -194,11 +205,6 @@ __export_function int k_pres_add_file
 
 	size_t namelen = strlen(name)+1;
 
-	if (pf->is_corrupt) {
-		errno = EINVAL;
-		goto unrecoverable_err;
-	}
-
 	int fd = open(name, O_RDONLY | O_NOATIME);
 	if (fd == -1) {
 		return 1;
@@ -217,10 +223,14 @@ __export_function int k_pres_add_file
 	memset(&pf->rtbl->table[pf->cur_resentries], 0, sz_res_tbl_entry);
 
 	k_hash_reset(pf->hash);
+	if (pf->hdr.cipher)
+		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
 	while ((nread = read(fd, buf, 32768)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(pf->hash, buf, nread);
+		if (pf->hdr.cipher)
+			k_sc_update(pf->scipher, buf, buf, nread);
 		while (total != nread) {
 			nwritten = write(pf->fd, buf + total, nread - total);
 			if (nwritten < 0) {
@@ -272,6 +282,11 @@ __export_function int k_pres_add_file
 	pf->cur_filesize = pf->cur_rtbl_start + pf->dhdr.resource_table_size +
 		pf->cur_resentries*sz_res_tbl_entry;
 
+	/* TODO: fix constant nonce size */
+	if (pf->hdr.cipher)
+		memcpy(pf->rtbl->table[pf->cur_resentries-1].data_iv,
+			data_nonce, 128);
+
 	return 0;
 unrecoverable_err:
 	pf->is_corrupt = 1;
@@ -282,6 +297,20 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 {
 	size_t s;
 	int res = 0;
+
+	/* TODO: retrieve random nonces here */
+	uint8_t dhdr_nonce[128] =	"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000";
+	uint8_t rtbl_nonce[128] =	"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000";
+	uint8_t spool_nonce[128] =	"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000";
 
 	if (pf->is_corrupt) {
 		errno = EINVAL;
@@ -296,6 +325,13 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	pf->rtbl->string_pool_start = pf->cur_stringpoolstart;
 	pf->rtbl->string_pool_size = pf->cur_stringpoolsize;
 
+	/* TODO: fix constant nonce size */
+	if (pf->hdr.cipher) {
+		memcpy(pf->hdr.detached_header_iv, dhdr_nonce, 128);
+		memcpy(pf->dhdr.resource_table_iv, rtbl_nonce, 128);
+		memcpy(pf->rtbl->string_pool_iv, spool_nonce, 128);
+	}
+
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
 	k_hash_final(pf->hash, pf->hdr.digest);
@@ -308,15 +344,25 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
 	k_hash_final(pf->hash, pf->dhdr.digest);
+
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_detached_hdr;
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, dhdr_nonce);
+		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, s);
+	}
 	if (write(pf->fd, &pf->dhdr, s) != s)
 		goto err_out;
 
 	if (lseek(pf->fd, pf->rtbl->string_pool_start, SEEK_SET) == -1)
 		goto err_out;
 	s = pf->stringpool.data_size;
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, spool_nonce);
+		k_sc_update(pf->scipher, pf->stringpool.base,
+			pf->stringpool.base, s);
+	}
 	if (write(pf->fd, pf->stringpool.base, s) != s)
 		goto err_out;
 
@@ -330,9 +376,13 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 		k_hash_final(pf->hash, pf->rtbl->table[i].digest);
 	}
 
-	if (lseek(pf->fd, pf->dhdr.resource_table_start, SEEK_SET) == -1)
+	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_res_tbl + pf->rtbl->entries*sz_res_tbl_entry;
+	if (pf->hdr.cipher) {
+		k_sc_set_nonce(pf->scipher, rtbl_nonce);
+		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, s);
+	}
 	if (write(pf->fd, pf->rtbl, s) != s)
 		goto err_out;
 

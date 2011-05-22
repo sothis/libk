@@ -95,8 +95,9 @@ static int import_directory(const char* directory, const char* filename)
 {
 	struct pres_options_t o = {
 		.name		= filename,
-		.hashsum 	= HASHSUM_SKEIN_512,
-		.hashsize	= 512,
+		.hashsum 	= HASHSUM_SKEIN_1024,
+		.hashsize	= 1024,
+#if 0
 		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
 		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
 		.keysize	= 1024,
@@ -104,6 +105,7 @@ static int import_directory(const char* directory, const char* filename)
 					"00000000000000000000000000000000"
 					"00000000000000000000000000000000"
 					"00000000000000000000000000000000"
+#endif
 	};
 
 	if (k_pres_create(&_cur_pres, &o)) {
