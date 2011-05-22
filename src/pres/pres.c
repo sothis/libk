@@ -22,10 +22,10 @@
 #ifndef __WINNT__
 #include <sys/mman.h>
 #else
-#include "ntwrap.h"
+#include "utils/ntwrap.h"
 #endif
 
-#include "tfile.h"
+#include "utils/tfile.h"
 
 #if defined(__DARWIN__) || defined(__WINNT__)
 #define O_NOATIME		0

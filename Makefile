@@ -119,20 +119,20 @@ SRC		+= ./src/utils/mem.c
 SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
 SRC		+= ./src/utils/unittest.c
+SRC		+= ./src/utils/mempool.c
+SRC		+= ./src/utils/tfile.c
+ifdef PLAT_WINNT
+SRC		+= ./src/utils/ntwrap.c
+endif
 
 SRC		+= ./src/tests/entry.c
 SRC		+= ./src/tests/blockciphermodes.c
 
-SRC		+= ./src/pres/mempool.c
 SRC		+= ./src/pres/pres.c
-SRC		+= ./src/pres/tfile.c
-ifdef PLAT_WINNT
-SRC		+= ./src/pres/ntwrap.c
-endif
 
 SRCPRES		+= ./src/pres/main.c
 ifdef PLAT_WINNT
-SRCPRES		+= ./src/pres/ntwrap.c
+SRCPRES		+= ./src/utils/ntwrap.c
 endif
 
 ################################################################################
