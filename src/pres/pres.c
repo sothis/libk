@@ -128,10 +128,35 @@ static int pres_rollback(struct pres_file_t* pf, size_t ssize)
 	return 0;
 }
 
-__export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
+__export_function int k_pres_add_file
+(struct pres_file_t* pf, const char* name, size_t basename_off)
 {
 	uint8_t buf[32768];
 	size_t filebytes = 0;
+
+	/* strip leading '.' and '/' components */
+	size_t name_off = 0;
+	const char* n = name;
+	while (*n && *n != '/') {
+		name_off++;
+		n++;
+	}
+	if (*n) {
+		name_off++;
+		name += name_off;
+		basename_off -= name_off;
+	}
+	/* not adding hidden objects */
+	n = name;
+	if (!memcmp(n, ".", 1)) {
+		return 1;
+	}
+	while (*n) {
+		if (!memcmp(n, "/.", 2))
+			return 1;
+		n++;
+	}
+
 	size_t namelen = strlen(name)+1;
 
 	if (pf->is_corrupt) {
@@ -201,6 +226,8 @@ __export_function int k_pres_add_file(struct pres_file_t* pf, const char* name)
 	pf->rtbl->table[pf->cur_resentries-1].filename_size = namelen;
 	pf->rtbl->table[pf->cur_resentries-1].filename_offset =
 		pf->cur_stringpoolsize;
+	pf->rtbl->table[pf->cur_resentries-1].basename_offset =
+		basename_off;
 	pf->cur_stringpoolsize += namelen;
 
 	pf->cur_datapoolsize += filebytes;
@@ -443,25 +470,40 @@ __export_function int k_pres_open(struct pres_file_t* pf, const char* name)
 	return 0;
 }
 
-__export_function int k_pres_list(struct pres_file_t* pf)
-{
-	uint64_t i = 0, e = pf->rtbl->entries;
-	struct pres_resource_table_entry_t* table = pf->rtbl->table;
-
-	printf("resources: %lu\n", (unsigned long)e);
-	for (i = 0; i < e; ++i) {
-		size_t fn_off = table[i].filename_offset;
-		const char* fn = pool_getmem(&pf->stringpool, fn_off);
-		printf("\t%lu: %s\t\t\t%lu bytes\n",
-			(unsigned long)table[i].id, fn,
-			(unsigned long)table[i].data_size);
-	}
-	return 0;
-}
 
 __export_function uint64_t k_pres_res_count(struct pres_file_t* pf)
 {
 	return pf->rtbl->entries;
+}
+
+__export_function const char* k_pres_res_name_by_id
+(struct pres_file_t* pf, uint64_t id)
+{
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+	return pool_getmem(&pf->stringpool, table[id-1].filename_offset);
+}
+
+__export_function const char* k_pres_res_basename_by_id
+(struct pres_file_t* pf, uint64_t id)
+{
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+	return pool_getmem(&pf->stringpool,
+		table[id-1].filename_offset + table[id-1].basename_offset);
+}
+
+__export_function uint64_t k_pres_res_id_by_name
+(struct pres_file_t* pf, const char* name)
+{
+	uint64_t i = 0, e = pf->rtbl->entries;
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+
+	for (i = 0; i < e; ++i) {
+		size_t fn_off = table[i].filename_offset;
+		const char* fn = pool_getmem(&pf->stringpool, fn_off);
+		if (!strcmp(fn, name))
+			return table[i].id;
+	}
+	return 0;
 }
 
 __export_function void k_pres_res_by_id
@@ -472,7 +514,32 @@ __export_function void k_pres_res_by_id
 	memset(&res->map, 0, sizeof(struct mmap_t));
 	res->size = table[id-1].data_size;
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
+	res->fd = pf->fd;
 }
+
+__export_function uint64_t k_pres_res_size
+(struct pres_res_t* res)
+{
+	return res->size;
+}
+
+__export_function void* k_pres_res_map
+(struct pres_res_t* res, uint64_t length, uint64_t offset)
+{
+	if (!length) {
+		length = res->size;
+		offset = 0;
+	}
+	pres_map(&res->map, res->fd, length, res->absoff+offset);
+	return res->map.mem;
+}
+
+__export_function void k_pres_res_unmap
+(struct pres_res_t* res)
+{
+	pres_unmap(&res->map);
+}
+
 
 __export_function int k_pres_close(struct pres_file_t* pf)
 {

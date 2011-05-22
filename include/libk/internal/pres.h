@@ -80,6 +80,7 @@ struct pres_detached_header_t {
 
 struct pres_resource_table_entry_t {
 	uint64_t	id;
+	uint64_t	basename_offset;
 
 	/* relative pointer into string pool */
 //	uint64_t	name_size;
@@ -155,6 +156,7 @@ struct pres_res_t {
 	struct mmap_t	map;
 	uint64_t	absoff;
 	uint64_t	size;
+	int		fd;
 };
 
 enum pres_structure_sizes_e {
@@ -193,7 +195,8 @@ extern int k_pres_create
  * 		but a consecutive call to pres_add_file is possible and safe
  * returns -1 if an unrecoverable error occured, the container might be
  * 		corrupt */
-extern int k_pres_add_file(struct pres_file_t* pf, const char* name);
+extern int k_pres_add_file
+(struct pres_file_t* pf, const char* name, size_t basename_off);
 
 /* closes the container and commits changes. if an error occurs closes and
  * unlinks the temporary file. if the contatiner was marked as corrupt by
@@ -206,10 +209,33 @@ extern int k_pres_commit_and_close(struct pres_file_t* pf);
 /* opens existing container */
 extern int k_pres_open(struct pres_file_t* pf, const char* name);
 
-/* list resources in container on stdout */
-extern int k_pres_list(struct pres_file_t* pf);
-
 /* closes open container */
 extern int k_pres_close(struct pres_file_t* pf);
+
+extern uint64_t k_pres_res_count
+(struct pres_file_t* pf);
+
+extern const char* k_pres_res_name_by_id
+(struct pres_file_t* pf, uint64_t id);
+
+extern const char* k_pres_res_basename_by_id
+(struct pres_file_t* pf, uint64_t id);
+
+extern uint64_t k_pres_res_id_by_name
+(struct pres_file_t* pf, const char* name);
+
+
+extern void k_pres_res_by_id
+(struct pres_file_t* pf, struct pres_res_t* res, uint64_t id);
+
+extern uint64_t k_pres_res_size
+(struct pres_res_t* res);
+
+extern void* k_pres_res_map
+(struct pres_res_t* res, uint64_t length, uint64_t offset);
+
+extern void k_pres_res_unmap
+(struct pres_res_t* res);
+
 
 #endif /* _PRES_H */
