@@ -180,6 +180,11 @@ __export_function int k_pres_add_file
 		goto unrecoverable_err;
 	}
 
+	int fd = open(name, O_RDONLY | O_NOATIME);
+	if (fd == -1) {
+		return 1;
+	}
+
 	/* strip leading '.' and '/' components */
 	size_t name_off = 0;
 	const char* n = name;
@@ -192,22 +197,20 @@ __export_function int k_pres_add_file
 		name += name_off;
 		basename_off -= name_off;
 	}
+	size_t namelen = strlen(name)+1;
+
 	/* not adding hidden objects */
 	n = name;
 	if (!memcmp(n, ".", 1)) {
+		close(fd);
 		return 1;
 	}
 	while (*n) {
-		if (!memcmp(n, "/.", 2))
+		if (!memcmp(n, "/.", 2)) {
+			close(fd);
 			return 1;
+		}
 		n++;
-	}
-
-	size_t namelen = strlen(name)+1;
-
-	int fd = open(name, O_RDONLY | O_NOATIME);
-	if (fd == -1) {
-		return 1;
 	}
 
 	if (pool_append(&pf->stringpool, name, namelen)) {
