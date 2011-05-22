@@ -93,7 +93,13 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 
 static int import_directory(const char* directory, const char* filename)
 {
-	if (k_pres_create(&_cur_pres, filename, HASHSUM_SKEIN_512)) {
+	struct pres_options_t o = {
+		.name		= filename,
+		.hashsum 	= HASHSUM_SKEIN_512,
+		.hashsize	= 512
+	};
+
+	if (k_pres_create(&_cur_pres, &o)) {
 		perror("pres_create");
 		return -1;
 	}

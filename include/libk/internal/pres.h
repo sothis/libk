@@ -147,6 +147,27 @@ struct pres_res_t {
 	int		fd;
 };
 
+struct pres_options_t {
+	/* mandatory */
+	const char* name;
+	/* mandatory */
+	enum hashsum_e hashsum;
+	/* optional */
+	enum streamcipher_e streamcipher;
+	/* optional, ignored if a streamcipher is set */
+	enum blockcipher_e blockcipher;
+	/* optional, ignored if a streamcipher is set */
+	enum bcstreammode_e ciphermode;
+
+	/* optional, if 0 (i.e. not set, then the statesize of the selected
+	 * hashsum will be used */
+	uint32_t hashsize;
+	/* mandatory if a cipher is set */
+	uint32_t keysize;
+	/* optional, depends on the selected cipher */
+	uint32_t tweaksize;
+};
+
 enum pres_structure_sizes_e {
 	sz_file_header = sizeof(struct pres_file_header_t),
 	sz_header_digest = sz_file_header - PRES_MAX_DIGEST_LENGTH,
@@ -170,7 +191,7 @@ enum pres_structure_sizes_e {
  * in the current working directory. in that case the existing container
  * (if any) is still in the state like it was before invoking pres_create(). */
 extern int k_pres_create
-(struct pres_file_t* pf, const char* name, enum hashsum_e hashsum);
+(struct pres_file_t* pf, struct pres_options_t* opt);
 
 /* adds an existing file to the resource container, might fail, but leaves
  * state untouched in that case, so that a consecutive call with another file

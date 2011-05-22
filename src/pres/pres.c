@@ -54,22 +54,22 @@ static int pres_unmap(struct mmap_t* res)
 }
 
 __export_function int k_pres_create
-(struct pres_file_t* pf, const char* name, enum hashsum_e hashsum)
+(struct pres_file_t* pf, struct pres_options_t* opt)
 {
 	memset(pf, 0, sizeof(struct pres_file_t));
 
-	if (!hashsum) {
+	if (!opt->hashsum) {
 		errno = EINVAL;
 		return -1;
 	}
-	pf->hash = k_hash_init(hashsum, 0);
+	pf->hash = k_hash_init(opt->hashsum, opt->hashsize);
 	if (!pf->hash)
 		return -1;
 
 #ifdef NDEBUG
-	pf->fd = tcreat(name, 0400);
+	pf->fd = tcreat(opt->name, 0400);
 #else
-	pf->fd = tcreat(name, 0600);
+	pf->fd = tcreat(opt->name, 0600);
 #endif
 	if (pf->fd == -1) {
 		k_hash_finish(pf->hash);
@@ -78,7 +78,7 @@ __export_function int k_pres_create
 
 	pf->hdr.magic = PRES_MAGIC;
 	pf->hdr.version = PRES_VER;
-	pf->hdr.hashfunction = hashsum;
+	pf->hdr.hashfunction = opt->hashsum;
 	pf->hdr.hashsize = k_hash_digest_size(pf->hash);
 	pf->hdr.detached_header_size = sz_detached_hdr;
 	pf->hdr.detached_header_start = sz_file_header;
