@@ -41,14 +41,15 @@ struct pres_file_header_t {
 	 * the terminating zero byte. */
 	uint32_t	hashfunction;
 	uint32_t	hashsize;
-	/* if set, _all_ entities have to be signed */
+	/* if set, _all_ entities have to be signed. the signature itself
+	 * will be encrypted, if encryption is enabled. that is, verification
+	 * is done on the plain text data, not the encrypted data. due to that,
+	 * verification is only possible when the decryption key is available.
+	 * the same applies to all digests. */
 //	uint32_t	pres_signed;
 	/* used cipher. when not encrypted, set to 0. if set, _all_ entities
-	 * have to be encrypted. TODO: think about if we sign the
-	 * data before or after encryption. the latter one allows verification
-	 * without decryption but may leak information about the count of
-	 * resources in the container due to padding zero bytes in the
-	 * signature. */
+	 * have to be encrypted. the only plaintext part of the file remaining,
+	 * is this file header */
 	uint32_t	cipher;
 	/* if the used cipher is a plain streamcipher, set ciphermode to 0 */
 	uint32_t	ciphermode;
@@ -58,7 +59,7 @@ struct pres_file_header_t {
 
 	uint64_t	detached_header_size;
 	uint64_t	detached_header_start;
-//	uint8_t		detached_header_iv[PRES_MAX_IV_LENGTH];
+	uint8_t		detached_header_iv[PRES_MAX_IV_LENGTH];
 
 	/* if pres_signed is not set, the content is irrelevant, but will be
 	 * used in digest calculations */
@@ -72,7 +73,7 @@ struct pres_file_header_t {
 struct pres_detached_header_t {
 	uint64_t	resource_table_size;
 	uint64_t	resource_table_start;
-//	uint8_t		resource_table_iv[PRES_MAX_IV_LENGTH];
+	uint8_t		resource_table_iv[PRES_MAX_IV_LENGTH];
 
 //	uint8_t		signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		digest[PRES_MAX_DIGEST_LENGTH];
@@ -83,30 +84,15 @@ struct pres_resource_table_entry_t {
 	uint64_t	basename_offset;
 
 	/* relative pointer into string pool */
-//	uint64_t	name_size;
-//	uint64_t	name_offset;
-//	uint8_t		name_iv[PRES_MAX_IV_LENGTH];
-//	uint8_t		name_signature[PRES_MAX_SIG_LENGTH];
-//	uint8_t		name_digest[PRES_MAX_DIGEST_LENGTH];
-
-	/* relative pointer into string pool */
 	uint64_t	filename_size;
 	uint64_t	filename_offset;
-//	uint8_t		filename_iv[PRES_MAX_IV_LENGTH];
 //	uint8_t		filename_signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		filename_digest[PRES_MAX_DIGEST_LENGTH];
-
-	/* relative pointer into string pool */
-//	uint64_t	description_size;
-//	uint64_t	description_offset;
-//	uint8_t		description_iv[PRES_MAX_IV_LENGTH];
-//	uint8_t		description_signature[PRES_MAX_SIG_LENGTH];
-//	uint8_t		description_digest[PRES_MAX_DIGEST_LENGTH];
 
 	/* relative pointer into data pool */
 	uint64_t	data_size;
 	uint64_t	data_offset;
-//	uint8_t		data_iv[PRES_MAX_IV_LENGTH];
+	uint8_t		data_iv[PRES_MAX_IV_LENGTH];
 //	uint8_t		data_signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		data_digest[PRES_MAX_DIGEST_LENGTH];
 
@@ -115,16 +101,17 @@ struct pres_resource_table_entry_t {
 } __attribute__((packed));
 
 struct pres_resource_table_t {
-	uint64_t				entries;
+	uint64_t			entries;
 
-	uint64_t				string_pool_size;
-	uint64_t				string_pool_start;
+	uint64_t			string_pool_size;
+	uint64_t			string_pool_start;
+	uint8_t				string_pool_iv[PRES_MAX_IV_LENGTH];
 
-	uint64_t				data_pool_size;
-	uint64_t				data_pool_start;
+	uint64_t			data_pool_size;
+	uint64_t			data_pool_start;
 
-//	uint8_t					signature[PRES_MAX_SIG_LENGTH];
-	uint8_t					digest[PRES_MAX_DIGEST_LENGTH];
+//	uint8_t				signature[PRES_MAX_SIG_LENGTH];
+	uint8_t				digest[PRES_MAX_DIGEST_LENGTH];
 
 	struct pres_resource_table_entry_t	table[];
 } __attribute__((packed));
