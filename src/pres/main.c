@@ -215,8 +215,19 @@ int main(int argc, char* argv[], char* envp[])
 	if (argc < 2)
 		return -1;
 
-	if (!strcmp(argv[1], "import") && (argc > 3))
+	if (!strcmp(argv[1], "import") && (argc > 3)) {
+		size_t s = strlen(argv[2]);
+		/* TODO: introduce failsafe path resolution */
+		/* remove trailing slashes */
+		if (s > 0 && argv[2][s-1] == '/') {
+			char* last = argv[2] + s - 1;
+			while (*last == '/') {
+				*last = 0;
+				last--;
+			}
+		}
 		return import_directory(argv[2], argv[3]);
+	}
 	if (!strcmp(argv[1], "export-all") && (argc > 3))
 		return export_all(argv[2], argv[3]);
 
