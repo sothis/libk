@@ -131,6 +131,9 @@ SRC		+= ./src/pres/ntwrap.c
 endif
 
 SRCPRES		+= ./src/pres/main.c
+ifdef PLAT_WINNT
+SRCPRES		+= ./src/pres/ntwrap.c
+endif
 
 ################################################################################
 

@@ -18,8 +18,10 @@
 
 #ifndef __WINNT__
 #include <ftw.h>
+#define MKDIR_MODE ,0700
 #else
 #include "ntwrap.h"
+#define MKDIR_MODE
 #endif
 
 #include <libk/libk.h>
@@ -124,7 +126,7 @@ static void create_dirs(const char* path)
 	char* c = strtok(p, "/");
 	size_t n_done = 0;
 	while (c && n_done < n_dirs) {
-		mkdir(c, 0700);
+		mkdir(c MKDIR_MODE);
 		chdir(c);
 		c = strtok(0, "/");
 		n_done++;
@@ -141,7 +143,7 @@ static int export_all(const char* filename, const char* dir)
 		return -1;
 	}
 
-	mkdir(dir, 0700);
+	mkdir(dir MKDIR_MODE);
 	chdir(dir);
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
