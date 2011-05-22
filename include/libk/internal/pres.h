@@ -49,11 +49,11 @@ struct pres_file_header_t {
 	 * without decryption but may leak information about the count of
 	 * resources in the container due to padding zero bytes in the
 	 * signature. */
-//	uint32_t	cipher;
+	uint32_t	cipher;
 	/* if the used cipher is a plain streamcipher, set ciphermode to 0 */
-//	uint32_t	ciphermode;
-//	uint32_t	keysize;
-//	uint32_t	tweaksize;
+	uint32_t	ciphermode;
+	uint32_t	keysize;
+	uint32_t	tweaksize;
 	uint64_t	filesize;
 
 	uint64_t	detached_header_size;
@@ -139,6 +139,7 @@ struct pres_file_t {
 	int				fd;
 	int				is_corrupt;
 	k_hash_t*			hash;
+	k_sc_t*				scipher;
 	size_t				cur_filesize;
 	size_t				cur_rtbl_start;
 	size_t				cur_resentries;
