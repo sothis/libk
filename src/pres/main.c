@@ -99,7 +99,11 @@ static int import_directory(const char* directory, const char* filename)
 		.hashsize	= 512,
 		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
 		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
-		.keysize	= 1024
+		.keysize	= 1024,
+		.key		=	"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
+					"00000000000000000000000000000000"
 	};
 
 	if (k_pres_create(&_cur_pres, &o)) {

@@ -123,7 +123,20 @@ __export_function int k_pres_create
 		pf->scipher = k_sc_init(opt->streamcipher);
 	}
 
+	if (pf->hdr.cipher && !opt->key) {
+		trollback_and_close(pf->fd);
+		free(pf->rtbl);
+		k_hash_finish(pf->hash);
+		return -1;
+	}
 	if (pf->hdr.cipher && !pf->scipher) {
+		trollback_and_close(pf->fd);
+		free(pf->rtbl);
+		k_hash_finish(pf->hash);
+		return -1;
+	}
+	if (pf->hdr.cipher &&
+	k_sc_set_key(pf->scipher, opt->key, opt->keysize)) {
 		trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);

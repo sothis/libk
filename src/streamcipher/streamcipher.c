@@ -102,6 +102,7 @@ __export_function int32_t k_sc_set_key
 	if (c->cipher) {
 		if (c->cipher->insecure)
 			k_warn(K_EINSECUREENC);
+		/* TODO: test for valid keysize here */
 		c->cipher->init(c->ctx, key, keybits);
 	}
 	else return k_bcmode_set_key(c->blockcipher, key, keybits,

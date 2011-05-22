@@ -166,6 +166,9 @@ struct pres_options_t {
 	uint32_t keysize;
 	/* optional, depends on the selected cipher */
 	uint32_t tweaksize;
+
+	/* mandatory if a cipher is set */
+	void* key;
 };
 
 enum pres_structure_sizes_e {
