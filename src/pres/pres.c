@@ -80,6 +80,14 @@ __export_function int k_pres_create
 	pf->hdr.version = PRES_VER;
 	pf->hdr.hashfunction = opt->hashsum;
 	pf->hdr.hashsize = k_hash_digest_size(pf->hash);
+	if (opt->streamcipher)
+		pf->hdr.cipher = opt->streamcipher;
+	else {
+		pf->hdr.cipher = opt->blockcipher;
+		pf->hdr.ciphermode = opt->ciphermode;
+	}
+	pf->hdr.keysize = opt->keysize;
+	pf->hdr.tweaksize = opt->tweaksize;
 	pf->hdr.detached_header_size = sz_detached_hdr;
 	pf->hdr.detached_header_start = sz_file_header;
 
