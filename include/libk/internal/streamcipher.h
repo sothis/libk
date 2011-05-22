@@ -26,7 +26,7 @@ extern void k_sc_finish
 (k_sc_t* c);
 
 extern int32_t k_sc_set_key
-(k_sc_t* c, const void* key, uint32_t keybits, enum keytype_e t);
+(k_sc_t* c, const void* key, uint32_t keybits);
 
 extern void k_sc_set_nonce
 (k_sc_t* c, const void* nonce);

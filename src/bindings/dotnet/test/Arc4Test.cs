@@ -31,7 +31,6 @@ namespace nlibktest
 			return new TestStreamcipherThroughput {
 				cipherkind = StreamcipherKind.ARC4,
 				keybits = 2048,
-				keytype = KeyKind.Encrypt,
 				megabytes = 128
 			}.Run();
 		}

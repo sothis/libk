@@ -37,9 +37,9 @@ namespace nlibk
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 			internal static extern void k_sc_set_nonce(UIntPtr context, [In] byte[] nonce);
 
-			/* int32_t k_sc_set_key(k_sc_t* c, const void* key, uint32_t keybits, enum keytype_e t); */
+			/* int32_t k_sc_set_key(k_sc_t* c, const void* key, uint32_t keybits); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-			internal static extern int k_sc_set_key(UIntPtr context, [In] byte[] key, UInt32 bits, KeyKind type);
+			internal static extern int k_sc_set_key(UIntPtr context, [In] byte[] key, UInt32 bits);
 
 			/* void k_sc_update(k_sc_t* c, const void* input, void* output, size_t bytes); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
@@ -74,7 +74,7 @@ namespace nlibk
 
 		#endregion
 
-		public void SetKey(KeyKind type, byte[] key, int bits)
+		public void SetKey(byte[] key, int bits)
 		{
 			if (key == null)
 				throw new ArgumentNullException();
@@ -82,13 +82,13 @@ namespace nlibk
 				throw new ArgumentException();
 			if (key.Length < ((bits + 7) / 8))
 				throw new ArgumentOutOfRangeException();
-			if (SafeNativeMethods.k_sc_set_key(context, key, (uint)bits, type) != 0)
+			if (SafeNativeMethods.k_sc_set_key(context, key, (uint)bits) != 0)
 				UnmanagedError.ThrowLastError();
 		}
 
-		public void SetKey(KeyKind type, byte[] key)
+		public void SetKey(byte[] key)
 		{
-			SetKey(type, key, key.Length * 8);
+			SetKey(key, key.Length * 8);
 		}
 
 		public void SetNonce(byte[] nonce)

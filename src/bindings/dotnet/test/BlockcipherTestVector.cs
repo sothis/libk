@@ -98,12 +98,12 @@ namespace nlibktest
 
 			using (Streamcipher cipher = new Streamcipher(Cipher, (BlockcipherStreamModeKind)Mode)) {
 				cipher.SetNonce(_iv);
-				cipher.SetKey(KeyKind.Encrypt, _key);
+				cipher.SetKey(_key);
 				ciphertext = new byte[_plaintext.Length];
 				cipher.Update(_plaintext, ciphertext);
 				enc = CipherMatch(ciphertext);
 
-				cipher.SetKey(KeyKind.Decrypt, _key);
+				cipher.SetKey(_key);
 				cipher.SetNonce(_iv);
 				plaintext = new byte[_ciphertext.Length];
 				cipher.Update(_ciphertext, plaintext);

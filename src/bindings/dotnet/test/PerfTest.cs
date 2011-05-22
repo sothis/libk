@@ -80,7 +80,6 @@ namespace nlibktest
 	public class TestStreamcipherThroughput
 	{
 		public StreamcipherKind cipherkind;
-		public KeyKind keytype;
 		public int keybits;
 		public int megabytes;
 
@@ -94,7 +93,7 @@ namespace nlibktest
 				byte[] input = new byte[megabytes * 1048576];
 				byte[] output = new byte[megabytes * 1048576];
 
-				sc.SetKey(keytype, key, keybits);
+				sc.SetKey(key, keybits);
 				sc.Update(input, output);
 				GC.Collect();
 				t.Start();

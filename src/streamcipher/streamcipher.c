@@ -97,7 +97,7 @@ __export_function void k_sc_finish
 }
 
 __export_function int32_t k_sc_set_key
-(struct k_sc_t* c, const void* key, uint32_t keybits, enum keytype_e t)
+(struct k_sc_t* c, const void* key, uint32_t keybits)
 {
 	if (c->cipher) {
 		if (c->cipher->insecure)

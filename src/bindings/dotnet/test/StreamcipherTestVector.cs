@@ -59,12 +59,12 @@ namespace nlibktest
 			byte[] plaintext = null;
 
 			using (Streamcipher cipher = new Streamcipher(Cipher)) {
-				cipher.SetKey(KeyKind.Encrypt, _key);
+				cipher.SetKey(_key);
 				ciphertext = new byte[_plaintext.Length];
 				cipher.Update(_plaintext, ciphertext);
 				enc = CipherMatch(ciphertext);
 
-				cipher.SetKey(KeyKind.Decrypt, _key);
+				cipher.SetKey(_key);
 				plaintext = new byte[_ciphertext.Length];
 				cipher.Update(_ciphertext, plaintext);
 				dec = PlainMatch(plaintext);
