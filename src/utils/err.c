@@ -46,7 +46,8 @@ static void _default_err_handler
 {
 	if (l == K_LFATAL) {
 		fprintf(stderr, "libk error: %s (code: %u)\n", s, e);
-		exit(e);
+		/* enable this only for debugging purposes */
+		/* exit(e); */
 	} else {
 		fprintf(stderr, "libk warning: %s (code: %u)\n", s, e);
 	}

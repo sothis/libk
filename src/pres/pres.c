@@ -116,6 +116,20 @@ __export_function int k_pres_create
 		return -1;
 	}
 
+	if (opt->blockcipher && opt->ciphermode) {
+		pf->scipher = k_sc_init_with_blockcipher(opt->blockcipher,
+			opt->ciphermode, 0);
+	} else if (opt->streamcipher) {
+		pf->scipher = k_sc_init(opt->streamcipher);
+	}
+
+	if (pf->hdr.cipher && !pf->scipher) {
+		trollback_and_close(pf->fd);
+		free(pf->rtbl);
+		k_hash_finish(pf->hash);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -317,6 +331,7 @@ err_out:
 	res = -1;
 out:
 	k_hash_finish(pf->hash);
+	k_sc_finish(pf->scipher);
 	pool_free(&pf->stringpool);
 	free(pf->rtbl);
 	return res;

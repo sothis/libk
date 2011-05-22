@@ -96,7 +96,10 @@ static int import_directory(const char* directory, const char* filename)
 	struct pres_options_t o = {
 		.name		= filename,
 		.hashsum 	= HASHSUM_SKEIN_512,
-		.hashsize	= 512
+		.hashsize	= 512,
+		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
+		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
+		.keysize	= 1024
 	};
 
 	if (k_pres_create(&_cur_pres, &o)) {
