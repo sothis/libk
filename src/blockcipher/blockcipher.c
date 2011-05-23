@@ -8,6 +8,12 @@
  * worldwide. This software is distributed without any warranty.
 */
 
+/* TODO:
+ *	- currently _every_ cipher instance allocates a workbench, which
+ * 	  in turn starts always cpu count threads per default. think about
+ * 	  if we can make this more efficient.
+ * */
+
 #include <string.h>
 #include "blockcipher/modes/bcmode_desc.h"
 #include "utils/workbench.h"

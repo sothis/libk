@@ -171,22 +171,30 @@ static int pres_rollback(struct pres_file_t* pf, size_t ssize)
 __export_function int k_pres_add_file
 (struct pres_file_t* pf, const char* name, size_t basename_off)
 {
-	uint8_t buf[32768];
+	uint8_t* buf;
 	size_t filebytes = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
+
+	if (pf->is_corrupt) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* reading a rather large chunk at once to make better use
+	 * of encryption parallelization */
+	buf = malloc(16*1024*1024);
+	if (!buf) {
+		return -1;
+	}
 
 	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
 	memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
 	k_prng_update(prng, data_nonce, pf->nonce_size);
 	k_prng_finish(prng);
 
-	if (pf->is_corrupt) {
-		errno = EINVAL;
-		goto unrecoverable_err;
-	}
-
 	int fd = open(name, O_RDONLY | O_NOATIME);
 	if (fd == -1) {
+		free(buf);
 		return 1;
 	}
 
@@ -213,6 +221,7 @@ __export_function int k_pres_add_file
 	while (*n) {
 		if (!memcmp(n, "/.", 2)) {
 			close(fd);
+			free(buf);
 			return 1;
 		}
 		n++;
@@ -234,7 +243,7 @@ __export_function int k_pres_add_file
 	if (pf->hdr.cipher)
 		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
-	while ((nread = read(fd, buf, 32768)) > 0) {
+	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(pf->hash, buf, nread);
 		if (pf->hdr.cipher)
@@ -253,6 +262,7 @@ __export_function int k_pres_add_file
 		close(fd);
 		if (pres_rollback(pf, namelen))
 			goto unrecoverable_err;
+		free(buf);
 		return 1;
 	}
 	if(close(fd))
@@ -295,8 +305,10 @@ __export_function int k_pres_add_file
 		memcpy(pf->rtbl->table[pf->cur_resentries-1].data_iv,
 			data_nonce, pf->nonce_size);
 
+	free(buf);
 	return 0;
 unrecoverable_err:
+	free(buf);
 	pf->is_corrupt = 1;
 	return -1;
 }
