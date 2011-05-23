@@ -659,7 +659,8 @@ __export_function void k_pres_res_by_id
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
 	res->scipher = pf->scipher;
-	res->data_iv = table[id-1].data_iv;
+	if (res->scipher)
+		k_sc_set_nonce(res->scipher, table[id-1].data_iv);
 }
 
 __export_function uint64_t k_pres_res_size
@@ -677,11 +678,9 @@ __export_function void* k_pres_res_map
 	}
 	pres_map(&res->map, res->fd, length, res->absoff+offset);
 
-	if (res->scipher) {
-		k_sc_set_nonce(res->scipher, res->data_iv);
+	if (res->scipher)
 		k_sc_update(res->scipher, res->map.mem,
 			res->map.mem, length);
-	}
 
 	return res->map.mem;
 }
