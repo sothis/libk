@@ -67,6 +67,8 @@ int fsync(int fd)
 	return 0;
 }
 
+/* this implementation only supports MAP_PRIVATE with PROT_READ|PROT_WRITE
+ * at the moment */
 void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off)
 {
 	HANDLE hmap;
@@ -85,13 +87,13 @@ void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off)
 	if ((length + off) > len)
 		length = len - off;
 
-	hmap = CreateFileMapping((HANDLE)_get_osfhandle(fd), 0, PAGE_READONLY,
+	hmap = CreateFileMapping((HANDLE)_get_osfhandle(fd), 0, PAGE_WRITECOPY,
 		0, 0, 0);
 
 	if (!hmap)
 		return MAP_FAILED;
 
-	temp = MapViewOfFileEx(hmap, FILE_MAP_READ, h, l, length, start);
+	temp = MapViewOfFileEx(hmap, FILE_MAP_COPY, h, l, length, start);
 
 	if (!CloseHandle(hmap))
 		return MAP_FAILED;

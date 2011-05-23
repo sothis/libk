@@ -39,7 +39,8 @@ static int pres_map(struct mmap_t* res, int fd, size_t len, off_t offset)
 	/* TODO: determine pagesize once at program startup */
 	map_off = offset & ~(sysconf(_SC_PAGE_SIZE) - 1);
 	diff = offset - map_off;
-	void* data = mmap(0, len + diff, PROT_READ, MAP_PRIVATE, fd, map_off);
+	void* data = mmap(0, len + diff, PROT_READ|PROT_WRITE, MAP_PRIVATE,
+		fd, map_off);
 	if (data == MAP_FAILED)
 		return -1;
 	res->mem = data + diff;
@@ -660,6 +661,8 @@ __export_function void k_pres_res_by_id
 	res->size = table[id-1].data_size;
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
+	res->scipher = pf->scipher;
+	res->data_iv = table[id-1].data_iv;
 }
 
 __export_function uint64_t k_pres_res_size
@@ -676,6 +679,13 @@ __export_function void* k_pres_res_map
 		offset = 0;
 	}
 	pres_map(&res->map, res->fd, length, res->absoff+offset);
+
+	if (res->scipher) {
+		k_sc_set_nonce(res->scipher, res->data_iv);
+		k_sc_update(res->scipher, res->map.mem,
+			res->map.mem, length);
+	}
+
 	return res->map.mem;
 }
 

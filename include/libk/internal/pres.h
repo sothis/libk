@@ -144,6 +144,8 @@ struct pres_res_t {
 	struct mmap_t	map;
 	uint64_t	absoff;
 	uint64_t	size;
+	k_sc_t*		scipher;
+	void*		data_iv;
 	int		fd;
 };
 

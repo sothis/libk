@@ -16,6 +16,7 @@
 
 #define MAP_FAILED	((void*)~0ul)
 #define PROT_READ       0x01
+#define PROT_WRITE      0x02
 #define MAP_PRIVATE     0x02
 #define _SC_PAGE_SIZE	0x1e
 
