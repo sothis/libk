@@ -170,11 +170,12 @@ __export_function int k_pres_add_file
 {
 	uint8_t buf[32768];
 	size_t filebytes = 0;
-	/* TODO: retrieve random nonce here */
-	uint8_t data_nonce[128] =	"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000";
+	uint8_t data_nonce[128];
+
+	/* TODO: fix constant nonce size */
+	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
+	k_prng_update(prng, data_nonce, 128);
+	k_prng_finish(prng);
 
 	if (pf->is_corrupt) {
 		errno = EINVAL;
@@ -299,27 +300,23 @@ unrecoverable_err:
 
 __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 {
+	uint8_t dhdr_nonce[128];
+	uint8_t rtbl_nonce[128];
+	uint8_t spool_nonce[128];
 	size_t s;
 	int res = 0;
-
-	/* TODO: retrieve random nonces here */
-	uint8_t dhdr_nonce[128] =	"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000";
-	uint8_t rtbl_nonce[128] =	"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000";
-	uint8_t spool_nonce[128] =	"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000";
 
 	if (pf->is_corrupt) {
 		errno = EINVAL;
 		goto err_out;
 	}
+
+	/* TODO: fix constant nonce size */
+	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
+	k_prng_update(prng, dhdr_nonce, 128);
+	k_prng_update(prng, rtbl_nonce, 128);
+	k_prng_update(prng, spool_nonce, 128);
+	k_prng_finish(prng);
 
 	pf->hdr.filesize = pf->cur_filesize;
 	pf->dhdr.resource_table_start = pf->cur_rtbl_start;
