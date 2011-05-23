@@ -75,7 +75,8 @@ __export_function void k_prng_finish
 __export_function void k_prng_set_seed
 (struct k_prng_t* c, const void* seed, size_t seed_bytes)
 {
-	c->prng->init(c->ctx, seed, seed_bytes);
+	if (c->prng->init)
+		c->prng->init(c->ctx, seed, seed_bytes);
 }
 
 __export_function void k_prng_update
