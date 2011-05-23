@@ -176,8 +176,6 @@ static int export_all(const char* filename, const char* dir)
 
 		struct pres_res_t r;
 		k_pres_res_by_id(&_cur_pres, &r, i);
-		uint64_t s = k_pres_res_size(&r);
-		void* m = k_pres_res_map(&r, 0, 0);
 
 		int fd = open(name, O_RDWR|O_CREAT, 0400);
 		if (fd == -1) {
@@ -185,20 +183,48 @@ static int export_all(const char* filename, const char* dir)
 			exit(1);
 		}
 
-		size_t total = 0;
-		ssize_t nwritten;
-		while (total != s) {
-			nwritten = write(fd, m + total, s - total);
-			if (nwritten < 0) {
-				close(fd);
-				perror("write");
-				exit(1);
+		uint64_t s = k_pres_res_size(&r);
+		uint64_t mmap_window = 8*1024*1024;
+		size_t niter = s / mmap_window;
+		size_t nlast = s % mmap_window;
+
+		for (uint64_t i = 0; i < niter; ++i) {
+			void* m = k_pres_res_map(&r, mmap_window,
+				i*mmap_window);
+			size_t total = 0;
+			ssize_t nwritten;
+			while (total != mmap_window) {
+				nwritten = write(fd, m + total,
+					mmap_window - total);
+				if (nwritten < 0) {
+					close(fd);
+					perror("write");
+					exit(1);
+				}
+				total += nwritten;
 			}
-			total += nwritten;
+			k_pres_res_unmap(&r);
 		}
+		if (nlast) {
+			void* m = k_pres_res_map(&r, nlast,
+				niter*mmap_window);
+			size_t total = 0;
+			ssize_t nwritten;
+			while (total != nlast) {
+				nwritten = write(fd, m + total, nlast - total);
+				if (nwritten < 0) {
+					close(fd);
+					perror("write");
+					exit(1);
+				}
+				total += nwritten;
+			}
+			k_pres_res_unmap(&r);
+		}
+
+
 		fsync(fd);
 		close(fd);
-		k_pres_res_unmap(&r);
 	}
 
 	if (k_pres_close(&_cur_pres)) {
