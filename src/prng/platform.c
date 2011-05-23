@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "prng_desc.h"
 #include "utils/endian-neutral.h"
 #include "utils/unittest_desc.h"
