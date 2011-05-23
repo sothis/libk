@@ -127,6 +127,7 @@ struct pres_file_t {
 	int				is_corrupt;
 	k_hash_t*			hash;
 	k_sc_t*				scipher;
+	size_t				nonce_size;
 	size_t				cur_filesize;
 	size_t				cur_rtbl_start;
 	size_t				cur_resentries;

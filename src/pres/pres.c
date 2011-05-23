@@ -145,6 +145,9 @@ __export_function int k_pres_create
 		return -1;
 	}
 
+	if (pf->hdr.cipher)
+		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
+
 	return 0;
 }
 
@@ -170,11 +173,11 @@ __export_function int k_pres_add_file
 {
 	uint8_t buf[32768];
 	size_t filebytes = 0;
-	uint8_t data_nonce[128];
+	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
 
-	/* TODO: fix constant nonce size */
 	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
-	k_prng_update(prng, data_nonce, 128);
+	memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
+	k_prng_update(prng, data_nonce, pf->nonce_size);
 	k_prng_finish(prng);
 
 	if (pf->is_corrupt) {
@@ -290,7 +293,7 @@ __export_function int k_pres_add_file
 	/* TODO: fix constant nonce size */
 	if (pf->hdr.cipher)
 		memcpy(pf->rtbl->table[pf->cur_resentries-1].data_iv,
-			data_nonce, 128);
+			data_nonce, pf->nonce_size);
 
 	return 0;
 unrecoverable_err:
@@ -300,9 +303,9 @@ unrecoverable_err:
 
 __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 {
-	uint8_t dhdr_nonce[128];
-	uint8_t rtbl_nonce[128];
-	uint8_t spool_nonce[128];
+	uint8_t dhdr_nonce[PRES_MAX_IV_LENGTH];
+	uint8_t rtbl_nonce[PRES_MAX_IV_LENGTH];
+	uint8_t spool_nonce[PRES_MAX_IV_LENGTH];
 	size_t s;
 	int res = 0;
 
@@ -311,11 +314,13 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 		goto err_out;
 	}
 
-	/* TODO: fix constant nonce size */
 	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
-	k_prng_update(prng, dhdr_nonce, 128);
-	k_prng_update(prng, rtbl_nonce, 128);
-	k_prng_update(prng, spool_nonce, 128);
+	memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
+	memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
+	memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);
+	k_prng_update(prng, dhdr_nonce, pf->nonce_size);
+	k_prng_update(prng, rtbl_nonce, pf->nonce_size);
+	k_prng_update(prng, spool_nonce, pf->nonce_size);
 	k_prng_finish(prng);
 
 	pf->hdr.filesize = pf->cur_filesize;
@@ -328,9 +333,9 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 
 	/* TODO: fix constant nonce size */
 	if (pf->hdr.cipher) {
-		memcpy(pf->hdr.detached_header_iv, dhdr_nonce, 128);
-		memcpy(pf->dhdr.resource_table_iv, rtbl_nonce, 128);
-		memcpy(pf->rtbl->string_pool_iv, spool_nonce, 128);
+		memcpy(pf->hdr.detached_header_iv, dhdr_nonce, pf->nonce_size);
+		memcpy(pf->dhdr.resource_table_iv, rtbl_nonce, pf->nonce_size);
+		memcpy(pf->rtbl->string_pool_iv, spool_nonce, pf->nonce_size);
 	}
 
 	k_hash_reset(pf->hash);
@@ -490,6 +495,7 @@ __export_function int k_pres_open
 				pf->hdr.ciphermode, 0);
 		else
 			pf->scipher = k_sc_init(pf->hdr.cipher);
+		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
 
 		if (!pf->scipher ||
 		k_sc_set_key(pf->scipher, key, pf->hdr.keysize)) {
