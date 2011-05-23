@@ -36,7 +36,8 @@ enum streamcipher_e {
 
 enum prng_e {
 	PRNG_NOOP				= 0,
-	PRNG_MT19937_32				= 1,
+	PRNG_PLATFORM				= 1,
+	PRNG_MT19937_32				= 2,
 	/* insert new prngs above this line and adjust
 	 * PRNG_MAX_SUPPORT below accordingly */
 	PRNG_MAX_SUPPORT			= PRNG_MT19937_32

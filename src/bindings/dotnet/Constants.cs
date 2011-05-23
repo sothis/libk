@@ -55,6 +55,7 @@ namespace nlibk
 
 	public enum PrngKind
 	{
-		MersenneTwister19937_32	= 1
+		Platform		= 1,
+		MersenneTwister19937_32	= 2
 	};
 }

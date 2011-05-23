@@ -105,6 +105,7 @@ SRC		+= ./src/streamcipher/streamcipher.c
 SRC		+= ./src/streamcipher/arc4.c
 
 SRC		+= ./src/prng/prng.c
+SRC		+= ./src/prng/platform.c
 SRC		+= ./src/prng/mt19937.c
 
 SRC		+= ./src/hash/hash.c
@@ -145,6 +146,9 @@ endif
 DEFINES		+= -D_GNU_SOURCE=1
 ifndef PLAT_DARWIN
 DEFINES		+= -D_POSIX_C_SOURCE=200809L
+endif
+ifdef PLAT_WINNT
+DEFINES		+= -D_CRT_RAND_S=1
 endif
 DEFINES		+= -D_BSD_SOURCE=1
 DEFINES		+= -D_FILE_OFFSET_BITS=64
