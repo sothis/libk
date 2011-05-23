@@ -31,6 +31,9 @@ extern int32_t k_sc_set_key
 extern void k_sc_set_nonce
 (k_sc_t* c, const void* nonce);
 
+extern size_t k_sc_get_nonce_size
+(k_sc_t* c);
+
 extern void k_sc_update
 (k_sc_t* c, const void* input, void* output, size_t bytes);
 

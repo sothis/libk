@@ -119,6 +119,16 @@ __export_function void k_sc_set_nonce
 	// in order to be able to construct custom cryptosystems
 }
 
+__export_function size_t k_sc_get_nonce_size
+(struct k_sc_t* c)
+{
+	if (c->blockcipher)
+		return k_bc_get_blocksize(c->blockcipher);
+	// TODO: introduce nonce infrastructure for pure stream ciphers
+	// in order to be able to construct custom cryptosystems
+	return 0;
+}
+
 __export_function void k_sc_update
 (struct k_sc_t* c, const void* input, void* output, size_t bytes)
 {
