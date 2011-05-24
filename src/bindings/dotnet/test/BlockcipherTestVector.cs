@@ -100,7 +100,16 @@ namespace nlibktest
 				cipher.SetNonce(_iv);
 				cipher.SetKey(_key);
 				ciphertext = new byte[_plaintext.Length];
-				cipher.Update(_plaintext, ciphertext);
+
+				byte[] c = new byte[1];
+				byte[] p = new byte[1];
+				/* test byte-for-byte updating */
+				for (int s = 0; s < _plaintext.Length; ++s) {
+					System.Buffer.BlockCopy(_plaintext, s, p, 0, 1);
+					cipher.Update(p, c, 1);
+					System.Buffer.BlockCopy(c, 0, ciphertext, s, 1);
+				}
+
 				enc = CipherMatch(ciphertext);
 
 				cipher.SetKey(_key);

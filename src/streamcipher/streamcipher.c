@@ -163,17 +163,28 @@ __export_function void k_sc_update
 				(bytes > c->partial_remaining) ?
 				c->partial_remaining :
 				bytes;
+
 			uint8_t first_block_out[bs];
 			memset(first_block_out, 0, bs);
-
 			memcpy(c->partial_block+c->partial_bytes, input, b);
+
+			c->partial_remaining -= b;
+
+			if (c->partial_remaining) {
+				const void* oiv = k_bcmode_get_iv(c->blockcipher);
+				memcpy(c->old_iv, oiv, bs);
+			}
 
 			k_bcmode_update(c->blockcipher, c->partial_block,
 				first_block_out, 1);
 
+			if (c->partial_remaining) {
+				k_bcmode_set_iv(c->blockcipher, c->old_iv);
+			}
+
 			memcpy(output, first_block_out+c->partial_bytes, b);
 			c->partial_bytes += b;
-			c->partial_remaining -= b;
+
 			bytes -= b;
 			input += b;
 			output += b;

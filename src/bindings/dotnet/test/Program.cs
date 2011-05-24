@@ -51,7 +51,6 @@ namespace nlibktest
 		static void worker()
 		{
 			try {
-#if true
 				Console.WriteLine("AES ECB        : {0}", AesTest.TestECB() ? "passed" : "failed");
 				Console.WriteLine("AES CBC        : {0}", AesTest.TestCBC() ? "passed" : "failed");
 				Console.WriteLine("AES CFB        : {0}", AesTest.TestCFB() ? "passed" : "failed");
@@ -63,6 +62,7 @@ namespace nlibktest
 				Console.WriteLine("SKEIN512       : {0}", SkeinTest.Test512() ? "passed" : "failed");
 				Console.WriteLine("SKEIN1024      : {0}", SkeinTest.Test1024() ? "passed" : "failed");
 				Console.WriteLine("SHA1           : {0}", Sha1Test.Test() ? "passed" : "failed");
+#if false
 				Console.WriteLine("");
 				Console.WriteLine("AES128 CTR    : {0:f2} MiB/s", AesTest.Bench128CtrEnc());
 				Console.WriteLine("AES192 CTR    : {0:f2} MiB/s", AesTest.Bench192CtrEnc());
@@ -75,8 +75,8 @@ namespace nlibktest
 				Console.WriteLine("SKEIN1024     : {0:f2} MiB/s", SkeinTest.Bench1024());
 				Console.WriteLine("SHA1          : {0:f2} MiB/s", Sha1Test.Bench());
 				Console.WriteLine("ARC4          : {0:f2} MiB/s", Arc4Test.Bench());
-#endif
 				Console.WriteLine("MT19937-32    : {0:f2} MiB/s", Mt19937_32Test.Bench());
+#endif
 			} catch (Exception e) {
 				Console.WriteLine("An exception occured : {0}", e.Message);
 			}
