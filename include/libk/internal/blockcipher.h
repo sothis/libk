@@ -59,6 +59,9 @@ extern int32_t k_bcmode_set_tweak
 extern void k_bcmode_set_iv
 (k_bc_t* c, const void* iv);
 
+extern const void* k_bcmode_get_iv
+(k_bc_t* c);
+
 extern void k_bcmode_update
 (k_bc_t* c, const void* input, void* output, size_t blocks);
 

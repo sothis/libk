@@ -363,6 +363,12 @@ __export_function void k_bcmode_set_iv
 	memcpy(c->worker_ivs[0], iv, c->blockcipher->block_size);
 }
 
+__export_function const void* k_bcmode_get_iv
+(struct k_bc_t* c)
+{
+	return c->worker_ivs[0];
+}
+
 static void parallel_worker
 (void* arg)
 {

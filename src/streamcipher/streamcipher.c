@@ -163,6 +163,11 @@ __export_function void k_sc_update
 		k_bcmode_update(c->blockcipher, input, output, bytes/bs);
 		if (rem) {
 			uint8_t last_block_out[bs];
+
+			/* backup old iv */
+			const void* oiv = k_bcmode_get_iv(c->blockcipher);
+			memcpy(c->old_iv, oiv, bs);
+
 			memset(c->partial_block, 0, bs);
 			memset(last_block_out, 0, bs);
 			memcpy(c->partial_block, input+bytes-rem, rem);
@@ -170,6 +175,8 @@ __export_function void k_sc_update
 				last_block_out, 1);
 			memcpy(output+bytes-rem, last_block_out, rem);
 			c->have_partial_block = 1;
+			/* restore old iv */
+			k_bcmode_set_iv(c->blockcipher, c->old_iv);
 		} else
 			c->have_partial_block = 0;
 	}
