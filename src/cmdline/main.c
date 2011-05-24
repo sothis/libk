@@ -1,5 +1,5 @@
 /*
- * nktool - main.c
+ * ktool - main.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *
