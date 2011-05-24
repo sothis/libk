@@ -149,19 +149,13 @@ __export_function size_t k_sc_get_nonce_size
 	// in order to be able to construct custom cryptosystems
 	return 0;
 }
-#include <stdio.h>
+
 __export_function void k_sc_update
 (struct k_sc_t* c, const void* input, void* output, size_t bytes)
 {
 	if (c->cipher)
 		return c->cipher->update(c->ctx, input, output, bytes);
 	else {
-		/* TODO: this is broken. if we encrypt several bytes
-		 * in one step and decrypt them in more than one step with
-		 * 'bytes' being not a multiple of blocksize, the IV advances
-		 * ahead due to the padding bytes. therefore the next call to
-		 * k_sc_update will produce wrong output due to a non-matching
-		 * intermediate IV value */
 		size_t bs = k_bc_get_blocksize(c->blockcipher);
 
 		if (c->have_partial_block) {
@@ -172,30 +166,28 @@ __export_function void k_sc_update
 			uint8_t first_block_out[bs];
 			memset(first_block_out, 0, bs);
 
-			printf("processing partial block first\n");
-			printf("bytes total    : %lu\n", bytes);
-			printf("have           : %lu\n", c->partial_bytes);
-			printf("remaining free : %lu\n", c->partial_remaining);
-			printf("remaining proc : %lu\n", b);
+			memcpy(c->partial_block+c->partial_bytes, input, b);
 
 			k_bcmode_update(c->blockcipher, c->partial_block,
 				first_block_out, 1);
 
 			memcpy(output, first_block_out+c->partial_bytes, b);
 			c->partial_bytes += b;
+			c->partial_remaining -= b;
 			bytes -= b;
+			input += b;
+			output += b;
+
+			if (!c->partial_remaining) {
+				c->partial_bytes = 0;
+				c->have_partial_block = 0;
+			}
 		}
 
 		size_t rem = bytes % bs;
 		k_bcmode_update(c->blockcipher, input, output, bytes/bs);
 		if (rem) {
 			uint8_t last_block_out[bs];
-
-			printf("processing partial block last\n");
-			printf("bytes total    : %lu\n", bytes);
-			printf("have           : %lu\n", c->partial_bytes);
-			printf("remaining free : %lu\n", c->partial_remaining);
-			printf("remaining proc : %lu\n", rem);
 
 			/* backup old iv */
 			const void* oiv = k_bcmode_get_iv(c->blockcipher);
@@ -210,12 +202,9 @@ __export_function void k_sc_update
 			c->partial_bytes = rem;
 			c->partial_remaining = bs - rem;
 			c->have_partial_block = 1;
+
 			/* restore old iv */
 			k_bcmode_set_iv(c->blockcipher, c->old_iv);
-		} else {
-			c->have_partial_block = 0;
-			c->partial_bytes = 0;
-			c->partial_remaining = 0;
 		}
 	}
 }

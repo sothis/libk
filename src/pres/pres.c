@@ -634,10 +634,9 @@ static int _verify_rtbl_entries(struct pres_file_t* pf)
 		memset(digest_chk, 0, digest_bytes);
 		k_hash_update(hash, e, sz_rtblentry_digest);
 		k_hash_final(hash, digest_chk);
-printf("h1\n");
 		if (memcmp(e->digest, digest_chk, digest_bytes))
 			goto invalid;
-printf("h2\n");
+
 		uint64_t filename_end = 0;
 		if (_addu64(&filename_end,
 		e->filename_offset + pf->rtbl->string_pool_start,
@@ -645,7 +644,7 @@ printf("h2\n");
 			goto invalid;
 		if (filename_end > pf->hdr.filesize)
 			goto invalid;
-printf("h3\n");
+
 		uint64_t data_end = 0;
 		if (_addu64(&data_end,
 		e->data_offset + pf->rtbl->data_pool_start,
