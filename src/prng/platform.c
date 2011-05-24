@@ -38,7 +38,8 @@ static void platform_update(void* state, void* output)
 	struct platform_t* c = state;
 	size_t total = 0;
 	ssize_t nread;
-	while ((nread = read(c->fd_urandom, &r, sizeof(uint32_t))) > 0) {
+	while ((nread = read(c->fd_urandom, &r + total,
+		sizeof(uint32_t) - total)) > 0) {
 		total += nread;
 		if (total == sizeof(uint32_t))
 			break;
