@@ -63,6 +63,7 @@ struct k_sc_t {
 	k_bc_t*					blockcipher;
 	void*					ctx;
 	size_t					alloced_ctxsize;
+	void*					partial_block;
 } __attribute__((_section_alignment));
 
 

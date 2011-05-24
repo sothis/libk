@@ -76,6 +76,13 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		k_sc_finish(c);
 		return NULL;
 	}
+	size_t bs = k_bc_get_blocksize(c->blockcipher);
+	c->partial_block = k_calloc(1, bs);
+	if (!c->partial_block) {
+		k_sc_finish(c);
+		k_error(K_ENOMEM);
+		return NULL;
+	}
 	if (k_bcmode_set_mode(c->blockcipher, mode, max_workers)) {
 		k_sc_finish(c);
 		return NULL;
@@ -90,6 +97,8 @@ __export_function void k_sc_finish
 	if (c) {
 		if (c->blockcipher)
 			k_bc_finish(c->blockcipher);
+		if (c->partial_block)
+			k_free(c->partial_block);
 		if (c->ctx)
 			k_locked_free(c->ctx, c->alloced_ctxsize);
 		k_free(c);
