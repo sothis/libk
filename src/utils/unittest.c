@@ -15,7 +15,7 @@
 
 section_prologue(__unittests, struct unittest_desc);
 
-__export_function int run_unittests
+__export_function int k_run_unittests
 (int verbose)
 {
 	const struct unittest_desc* tests = section_start(__unittests);

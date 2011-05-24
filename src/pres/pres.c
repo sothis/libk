@@ -25,7 +25,6 @@
 #include "utils/ntwrap.h"
 #endif
 
-#include "utils/tfile.h"
 
 #if defined(__DARWIN__) || defined(__WINNT__)
 #define O_NOATIME		0

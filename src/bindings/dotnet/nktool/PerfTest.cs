@@ -12,7 +12,7 @@ using System;
 using System.Diagnostics;
 using nlibk;
 
-namespace nlibktest
+namespace nktool
 {
 	public class PerfWatch
 	{

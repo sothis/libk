@@ -11,7 +11,7 @@
 using System;
 using nlibk;
 
-namespace nlibktest
+namespace nktool
 {
 	class Program
 	{

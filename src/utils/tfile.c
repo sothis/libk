@@ -13,7 +13,7 @@
  * tfiles open */
 
 #include <libk/libk.h>
-#include "tfile.h"
+#include "utils/sections.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -99,7 +99,7 @@ static int __init(void)
 	return 0;
 }
 
-int tcreat(const char* name, mode_t mode)
+__export_function int tcreat(const char* name, mode_t mode)
 {
 	int res = -1;
 	mode_t old_umask;
@@ -165,7 +165,7 @@ out:
 	return res;
 }
 
-int tcommit_and_close(int fd)
+__export_function int tcommit_and_close(int fd)
 {
 	if (!tfile_init)
 		return 0;
@@ -181,7 +181,7 @@ int tcommit_and_close(int fd)
 	return 0;
 }
 
-void trollback_and_close(int fd)
+__export_function void trollback_and_close(int fd)
 {
 	if (!tfile_init)
 		return;

@@ -24,11 +24,15 @@
 
 #include <libk/internal/pres.h>
 #include <libk/internal/mempool.h>
+#include <libk/internal/tfile.h>
 
 typedef void (*k_err_fn)(enum k_error_e, enum k_errorlevel_e, const char*);
 
 extern void k_set_error_handler
 (k_err_fn error_handler);
+
+extern int k_run_unittests
+(int verbose);
 
 
 #endif /* _LIBK_H */

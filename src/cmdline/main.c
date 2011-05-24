@@ -1,5 +1,5 @@
 /*
- * pres - main.c
+ * nktool - main.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *
@@ -25,7 +25,6 @@
 #endif
 
 #include <libk/libk.h>
-#include "utils/tfile.h"
 
 #ifndef __WINNT__
 static void __term_handler(int sig, siginfo_t* info, void* unused)
@@ -268,6 +267,13 @@ int main(int argc, char* argv[], char* envp[])
 	}
 	if (!strcmp(argv[1], "export-all") && (argc > 3))
 		return export_all(argv[2], argv[3]);
-
+	if (!strcmp(argv[1], "--test")) {
+		int failed = k_run_unittests(1);
+		if (failed)
+			printf("failed unittests: %u\n", failed);
+		else
+			printf("passed all unittests\n");
+		return failed;
+	}
 	return -1;
 }

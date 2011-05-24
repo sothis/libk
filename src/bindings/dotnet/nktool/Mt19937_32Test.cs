@@ -1,5 +1,5 @@
 /*
- * libk - tfile.h
+ * libk - Mt19937_32Test.cs
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *
@@ -8,13 +8,18 @@
  * worldwide. This software is distributed without any warranty.
 */
 
-#ifndef _TFILE_H
-#define _TFILE_H
+using nlibk;
 
-#include <sys/types.h>
-
-int tcreat(const char* name, mode_t mode);
-int tcommit_and_close(int fd);
-void trollback_and_close(int fd);
-
-#endif /* _TFILE_H */
+namespace nktool
+{
+	public static class Mt19937_32Test
+	{
+		public static double Bench()
+		{
+			return new TestPrngThroughput {
+				Prng = PrngKind.MersenneTwister19937_32,
+				megabytes = 128
+			}.Run();
+		}
+	}
+}

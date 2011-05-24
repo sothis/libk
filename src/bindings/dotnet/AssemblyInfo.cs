@@ -19,7 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("nlibk")]
-[assembly: AssemblyCopyright("Copyright © Janos Laube 2011")]
+[assembly: AssemblyCopyright("Janos Laube 2011, CC0 Public Domain")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

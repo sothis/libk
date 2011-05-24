@@ -10,7 +10,7 @@
 
 using nlibk;
 
-namespace nlibktest
+namespace nktool
 {
 	public sealed class HashsumTestVector
 	{

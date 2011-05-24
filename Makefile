@@ -115,7 +115,8 @@ SRC		+= ./src/hash/skein/skein512.c
 SRC		+= ./src/hash/skein/skein1024.c
 SRC		+= ./src/hash/sha1/sha1.c
 
-
+SRC		+= ./src/tests/blockciphermodes.c
+SRC		+= ./src/pres/pres.c
 SRC		+= ./src/utils/mem.c
 SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
@@ -126,16 +127,11 @@ ifdef PLAT_WINNT
 SRC		+= ./src/utils/ntwrap.c
 endif
 
-SRC		+= ./src/tests/entry.c
-SRC		+= ./src/tests/blockciphermodes.c
 
-SRC		+= ./src/pres/pres.c
-
-SRCPRES		+= ./src/pres/main.c
-SRCPRES		+= ./src/utils/tfile.c
-SRCPRES		+= ./src/utils/mempool.c
+SRCBIN		+= ./src/cmdline/main.c
 ifdef PLAT_WINNT
-SRCPRES		+= ./src/utils/ntwrap.c
+# note: this might cause problems when doing static linkage, fix if necessary
+SRCBIN		+= ./src/utils/ntwrap.c
 endif
 
 ################################################################################
@@ -242,19 +238,11 @@ OBJECTS_ASM	:= $(patsubst %.asm, $(BUILDDIR)/.obj/%_ASM.o, $(ASM_SRC))
 
 OBJECTS		:= $(patsubst %.c, $(BUILDDIR)/.obj/%_C.o, $(C_SRC))
 OBJECTS		+= $(patsubst %.cpp, $(BUILDDIR)/.obj/%_CXX.o, $(CXX_SRC))
-OBJECTS_A	:= \
-	$(filter-out $(BUILDDIR)/.obj/./src/tests/entry_C.o, $(OBJECTS))
 
 OBJECTS_PIC	:= $(patsubst %.c, $(BUILDDIR)/.obj/%_C_PIC.o, $(C_SRC))
 OBJECTS_PIC	+= $(patsubst %.cpp, $(BUILDDIR)/.obj/%_CXX_PIC.o, $(CXX_SRC))
-OBJECTS_PIC_A	:= \
-	$(filter-out $(BUILDDIR)/.obj/./src/tests/entry_C_PIC.o, $(OBJECTS_PIC))
 
-TESTOBJ		:= $(filter $(BUILDDIR)/.obj/./src/tests/entry_C.o, $(OBJECTS))
-TESTOBJ_PIC	:= \
-	$(filter $(BUILDDIR)/.obj/./src/tests/entry_C_PIC.o, $(OBJECTS_PIC))
-
-OBJECTS_PRES	:= $(patsubst %.c, $(BUILDDIR)/.obj/%_C.o, $(SRCPRES))
+OBJECTS_BIN	:= $(patsubst %.c, $(BUILDDIR)/.obj/%_C.o, $(SRCBIN))
 
 # tools
 STRIP		:=  $(CROSS)strip
@@ -337,21 +325,19 @@ ifdef PLAT_WINNT
 final-all-recursive:					\
 	$(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT)		\
 	$(BUILDDIR)/$(PROJECT_NAME).a			\
-	$(BUILDDIR)/$(PROJECT_NAME)_test_dyn		\
-	$(BUILDDIR)/$(PROJECT_NAME)_test_stat		\
-	$(BUILDDIR)/pres
+	$(BUILDDIR)/sktool				\
+	$(BUILDDIR)/ktool
 else
 final-all-recursive:					\
 	$(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT)		\
 	$(BUILDDIR)/$(PROJECT_NAME).a			\
 	$(BUILDDIR)/$(PROJECT_NAME)_pic.a		\
-	$(BUILDDIR)/$(PROJECT_NAME)_test_dyn		\
-	$(BUILDDIR)/$(PROJECT_NAME)_test_stat		\
-	$(BUILDDIR)/pres
+	$(BUILDDIR)/sktool				\
+	$(BUILDDIR)/ktool
 endif
 
 ifdef PLAT_WINNT
-$(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT): $(OBJECTS_A) $(OBJECTS_ASM)
+$(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT): $(OBJECTS) $(OBJECTS_ASM)
 else
 $(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT): $(OBJECTS_PIC) $(OBJECTS_ASM)
 endif
@@ -370,8 +356,8 @@ else
 		$(LDFLAGS) $(LPATH) -o $(@) $(^) $(LIBRARIES)
 endif
 
-$(BUILDDIR)/$(PROJECT_NAME)_test_dyn:	\
-	$(TESTOBJ) $(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT)
+$(BUILDDIR)/ktool:	\
+	$(OBJECTS_BIN) $(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT)
 	$(print_ld) $(subst $(PWD)/,./,$(abspath $(@)))
 	@-mkdir -p $(dir $(@))
 ifdef PLAT_DARWIN
@@ -382,8 +368,8 @@ else
 	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
 endif
 
-$(BUILDDIR)/$(PROJECT_NAME)_test_stat:	\
-	$(TESTOBJ) $(BUILDDIR)/$(PROJECT_NAME).a
+$(BUILDDIR)/sktool:	\
+	$(OBJECTS_BIN) $(BUILDDIR)/$(PROJECT_NAME).a
 	$(print_ld) $(subst $(PWD)/,./,$(abspath $(@)))
 	@-mkdir -p $(dir $(@))
 ifdef PLAT_DARWIN
@@ -394,25 +380,14 @@ else
 	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
 endif
 
-$(BUILDDIR)/pres:	\
-	$(OBJECTS_PRES) $(BUILDDIR)/$(PROJECT_NAME).$(SO_EXT)
-	$(print_ld) $(subst $(PWD)/,./,$(abspath $(@)))
-	@-mkdir -p $(dir $(@))
-ifdef PLAT_DARWIN
-	$(LD) -Wl,-rpath,"@loader_path/" $(MACARCHS) $(LDFLAGS) \
-	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
-else
-	@export LD_RUN_PATH='$${ORIGIN}' && $(LD) $(MACARCHS) $(LDFLAGS) \
-	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
-endif
 
-$(BUILDDIR)/.obj/$(PROJECT_NAME).ro: $(OBJECTS_A) $(OBJECTS_ASM)
+$(BUILDDIR)/.obj/$(PROJECT_NAME).ro: $(OBJECTS) $(OBJECTS_ASM)
 	@$(print_ld) $(subst $(PWD)/,./,$(abspath $(@)))
 	@-mkdir -p $(dir $(@))
 	$(LD) -nostdlib -Wl,-r $(MACARCHS) $(LDFLAGS) \
 	$(LPATH) $(FRAMEWORKS) -o $(@) $(^)
 
-$(BUILDDIR)/.obj/$(PROJECT_NAME)_pic.ro: $(OBJECTS_PIC_A) $(OBJECTS_ASM)
+$(BUILDDIR)/.obj/$(PROJECT_NAME)_pic.ro: $(OBJECTS_PIC) $(OBJECTS_ASM)
 	@$(print_ld) $(subst $(PWD)/,./,$(abspath $(@)))
 	@-mkdir -p $(dir $(@))
 	$(LD) -fPIC -nostdlib -Wl,-r $(MACARCHS) $(LDFLAGS) \
