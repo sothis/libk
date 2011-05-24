@@ -874,7 +874,7 @@ __export_function int k_pres_open
 	return 0;
 failed:
 	if (pf->scipher)
-			k_sc_finish(pf->scipher);
+		k_sc_finish(pf->scipher);
 	close(pf->fd);
 	return -1;
 }
