@@ -483,6 +483,22 @@ static int _verify_file_header(int fd, struct pres_file_header_t* hdr)
 	if (memcmp(hdr->digest, digest_chk, digest_bytes))
 		goto invalid;
 
+	if (hdr->ciphermode > BLK_CIPHER_MODE_MAX_SUPPORT)
+		goto invalid;
+
+	if (hdr->ciphermode) {
+		if (!hdr->cipher || hdr->cipher > BLK_CIPHER_MAX_SUPPORT)
+			goto invalid;
+	} else if (hdr->cipher && hdr->cipher > STREAM_CIPHER_MAX_SUPPORT)
+		goto invalid;
+
+	if (hdr->cipher && !hdr->keysize)
+		goto invalid;
+
+	if (hdr->detached_header_start + hdr->detached_header_size >
+		hdr->filesize)
+		goto invalid;
+
 	goto valid;
 
 invalid:
@@ -491,6 +507,13 @@ valid:
 	if (hash)
 		k_hash_finish(hash);
 	return res;
+}
+
+static int _init_streamcipher(struct pres_file_header_t* hdr, void* key)
+{
+	if (!hdr->cipher)
+
+	return 0;
 }
 
 /* TODO:
