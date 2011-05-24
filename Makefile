@@ -127,12 +127,7 @@ ifdef PLAT_WINNT
 SRC		+= ./src/utils/ntwrap.c
 endif
 
-
 SRCBIN		+= ./src/cmdline/main.c
-ifdef PLAT_WINNT
-# note: this might cause problems when doing static linkage, fix if necessary
-SRCBIN		+= ./src/utils/ntwrap.c
-endif
 
 ################################################################################
 
