@@ -418,6 +418,16 @@ out:
 	return res;
 }
 
+static inline int _addu64(uint64_t* res, uint64_t a, uint64_t b)
+{
+	uint64_t c = a + b;
+	if (!b || (c > a)) {
+		*res = c;
+		return 0;
+	}
+	return -1;
+}
+
 static int _open_pres(const char* name)
 {
 	struct stat st;
@@ -495,8 +505,12 @@ static int _verify_file_header(int fd, struct pres_file_header_t* hdr)
 	if (hdr->cipher && !hdr->keysize)
 		goto invalid;
 
-	if (hdr->detached_header_start + hdr->detached_header_size >
-		hdr->filesize)
+	uint64_t dhdr_end = 0;
+	if (_addu64(&dhdr_end, hdr->detached_header_start,
+		hdr->detached_header_size))
+		goto invalid;
+
+	if (dhdr_end > hdr->filesize)
 		goto invalid;
 
 	goto valid;
