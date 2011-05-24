@@ -418,6 +418,81 @@ out:
 	return res;
 }
 
+static int _open_pres(const char* name)
+{
+	struct stat st;
+	int fd = -1;
+
+	fd = open(name, O_RDONLY|O_NOATIME);
+	if (fd == -1)
+		goto failed;
+	if (fstat(fd, &st))
+		goto failed;
+	if (!S_ISREG(st.st_mode))
+		goto failed;
+	if (st.st_size < (sz_file_header + sz_detached_hdr))
+		goto failed;
+
+	return fd;
+failed:
+	if (fd)
+		close(fd);
+	return -1;
+}
+
+static int _get_file_header(int fd, struct pres_file_header_t* hdr)
+{
+	struct mmap_t map;
+	if (pres_map(&map, fd, sz_file_header, 0))
+		return -1;
+	memcpy(hdr, map.mem, sz_file_header);
+	pres_unmap(&map);
+	return 0;
+}
+
+static int _verify_file_header(int fd, struct pres_file_header_t* hdr)
+{
+	struct stat st;
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	k_hash_t* hash = 0;
+	int res = 0;
+	int digest_bits = hdr->hashsize;
+	int hashfn = hdr->hashfunction;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
+	if (fstat(fd, &st))
+		goto invalid;
+	if (hdr->magic != PRES_MAGIC)
+		goto invalid;
+	/* currently no back and forward compatibility */
+	if (hdr->version != PRES_VER)
+		goto invalid;
+	if (hdr->filesize != st.st_size)
+		goto invalid;
+	if (!hashfn || hashfn > HASHSUM_MAX_SUPPORT)
+		goto invalid;
+	if (!digest_bytes || digest_bytes > PRES_MAX_DIGEST_LENGTH)
+		goto invalid;
+
+	hash = k_hash_init(hashfn, digest_bits);
+	if (!hash)
+		goto invalid;
+	memset(digest_chk, 0, digest_bytes);
+	k_hash_update(hash, hdr, sz_header_digest);
+	k_hash_final(hash, digest_chk);
+	if (memcmp(hdr->digest, digest_chk, digest_bytes))
+		goto invalid;
+
+	goto valid;
+
+invalid:
+	res = -1;
+valid:
+	if (hash)
+		k_hash_finish(hash);
+	return res;
+}
+
 /* TODO:
  * - check offset+size against filesize, don't forget overflow checking
  * - if some digest checks fail, it might be still possible to access a valid
@@ -428,74 +503,18 @@ out:
 __export_function int k_pres_open
 (struct pres_file_t* pf, const char* name, const void* key)
 {
+	struct mmap_t map;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 
 	memset(pf, 0, sizeof(struct pres_file_t));
-	pf->fd = open(name, O_RDONLY);
+	pf->fd = _open_pres(name);
 	if (pf->fd == -1)
 		return -1;
-
-	struct stat st;
-	if (fstat(pf->fd, &st)) {
+	if (_get_file_header(pf->fd, &pf->hdr)) {
 		close(pf->fd);
 		return -1;
 	}
-
-	if (!S_ISREG(st.st_mode)) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (st.st_size < sz_file_header) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-
-	struct mmap_t map;
-	pres_map(&map, pf->fd, sz_file_header, 0);
-	memcpy(&pf->hdr, map.mem, sz_file_header);
-	pres_unmap(&map);
-	if (pf->hdr.magic != PRES_MAGIC) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-	/* currently no back and forward compatibility */
-	if (pf->hdr.version != PRES_VER) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-	if (pf->hdr.filesize != st.st_size) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-	if (!pf->hdr.hashfunction ||
-	pf->hdr.hashfunction > HASHSUM_MAX_SUPPORT) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-	if (!pf->hdr.hashsize ||
-	pf->hdr.hashsize > PRES_MAX_DIGEST_LENGTH*8) {
-		close(pf->fd);
-		errno = EINVAL;
-		return -1;
-	}
-
-	pf->hash = k_hash_init(pf->hdr.hashfunction, pf->hdr.hashsize);
-	if (!pf->hash) {
-		close(pf->fd);
-		return -1;
-	}
-
-	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
-	k_hash_final(pf->hash, digest_chk);
-	if (memcmp(pf->hdr.digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
-		k_hash_finish(pf->hash);
+	if (_verify_file_header(pf->fd, &pf->hdr)) {
 		close(pf->fd);
 		return -1;
 	}
