@@ -275,5 +275,9 @@ int main(int argc, char* argv[], char* envp[])
 			printf("passed all unittests\n");
 		return failed;
 	}
+	if (!strcmp(argv[1], "--version")) {
+		k_print_version_info();
+		return 0;
+	}
 	return -1;
 }

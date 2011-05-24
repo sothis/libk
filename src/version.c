@@ -1,0 +1,21 @@
+/*
+ * libk - version.c
+ *
+ * 2011, Janos Laube <janos.dev@gmail.com>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+*/
+
+#include <stdio.h>
+#include "utils/sections.h"
+
+const char* const __libk_version_string = VERSION;
+const char* const __libk_builddate_string = __DATE__;
+const char* const __libk_buildtime_string = __TIME__;
+
+__export_function void k_print_version_info(void)
+{
+	fprintf(stderr, "libk %s, %s %s\n", VERSION, __DATE__, __TIME__);
+}
