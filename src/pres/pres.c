@@ -188,6 +188,10 @@ __export_function int k_pres_add_file
 	}
 
 	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
+	if (!prng) {
+		free(buf);
+		return -1;
+	}
 	memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
 	k_prng_update(prng, data_nonce, pf->nonce_size);
 	k_prng_finish(prng);
@@ -246,10 +250,6 @@ __export_function int k_pres_add_file
 	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(pf->hash, buf, nread);
-		/* TODO: due to a major design flaw in k_sc_update,
-		 * nread has to be a multiple of the blocksize of the
-		 * used cipher, if it does not match, we can't decrypt
-		 * anymore. this does not affect the last processed block. */
 		if (pf->hdr.cipher)
 			k_sc_update(pf->scipher, buf, buf, nread);
 		while (total != nread) {
@@ -331,6 +331,9 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	}
 
 	k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
+	if (!prng) {
+		goto err_out;
+	}
 	memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
 	memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
 	memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);

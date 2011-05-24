@@ -39,6 +39,7 @@ static const char* const _err_messages[] = {
 	"hash context size exceeds allowed maximum locked memory size, "
 		"see 'ulimit'",
 	"the hashsum was marked as insecure",
+	"cannot open unix random device"
 };
 
 static void _default_err_handler

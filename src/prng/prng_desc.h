@@ -22,6 +22,13 @@ typedef void (*prng_init_fn)(
 	size_t		seed_bytes
 );
 
+typedef void (*prng_setfds_fn)(
+	void*		state,
+	int		fd_random,
+	int		fd_urandom
+);
+
+
 typedef void (*prng_update_fn)(
 	void*		state,
 	void*		output
@@ -36,6 +43,7 @@ struct prng_desc {
 
 	const prng_init_fn		init;
 	const prng_update_fn		update;
+	const prng_setfds_fn		setfds;
 
 	/* word size in bits, if similar prng's differ in their
 	 * word size, add a new prng module for each one */
@@ -49,9 +57,13 @@ struct prng_desc {
 
 /* internal context structure for public apis */
 struct k_prng_t {
-	const struct prng_desc*			prng;
-	void*					ctx;
-	size_t					alloced_ctxsize;
+	const struct prng_desc*		prng;
+	void*				ctx;
+	size_t				alloced_ctxsize;
+
+	/* filedescriptors for unix random devices */
+	int				fd_random;
+	int				fd_urandom;
 } __attribute__((_section_alignment));
 
 

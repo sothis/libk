@@ -142,12 +142,18 @@ static void create_dirs(const char* path)
 	size_t n_done = 0;
 	while (c && n_done < n_dirs) {
 		mkdir(c MKDIR_MODE);
-		chdir(c);
+		if (chdir(c)) {
+			perror("chdir");
+			exit(1);
+		}
 		c = strtok(0, "/");
 		n_done++;
 	}
 	free(p);
-	chdir(cur);
+	if (chdir(cur)) {
+		perror("chdir");
+		exit(1);
+	}
 	free(cur);
 }
 
@@ -164,7 +170,10 @@ static int export_all(const char* filename, const char* dir)
 	}
 
 	mkdir(dir MKDIR_MODE);
-	chdir(dir);
+	if (chdir(dir)) {
+		perror("chdir");
+		exit(1);
+	}
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
 
@@ -184,11 +193,7 @@ static int export_all(const char* filename, const char* dir)
 		}
 
 		uint64_t s = k_pres_res_size(&r);
-		/* TODO: due to a major design flaw in k_sc_update the
-		 * mmap_window has to be a multiple of the blocksize of the
-		 * used cipher. this does not affect the last processed
-		 * block. */
-		uint64_t mmap_window = 8*1024*1024;
+		uint64_t mmap_window = 16*1024*1024;
 		size_t niter = s / mmap_window;
 		size_t nlast = s % mmap_window;
 

@@ -18,18 +18,31 @@
 #include "utils/unittest_desc.h"
 
 struct platform_t {
-	uint32_t	dummy;
+	int	fd_random;
+	int	fd_urandom;
 };
+
+static void platform_setfds(void* state, int fd_random, int fd_urandom)
+{
+	struct platform_t* c = state;
+	c->fd_random = fd_random;
+	c->fd_urandom = fd_urandom;
+}
 
 static void platform_update(void* state, void* output)
 {
+	struct platform_t* c = state;
 	uint32_t r = 0;
 #ifdef __WINNT__
 	rand_s(&r);
 #else
-	int fd = open("/dev/urandom", O_RDONLY);
-	read(fd, &r, sizeof(uint32_t));
-	close(fd);
+	size_t total = 0;
+	ssize_t nread;
+	while ((nread = read(c->fd_urandom, &r, sizeof(uint32_t))) > 0) {
+		total += nread;
+		if (total == sizeof(uint32_t))
+			break;
+	}
 #endif
 	_put_uint32_l(output, r);
 }
@@ -44,5 +57,6 @@ prng_start(PLATFORM, "Platform Specific Prng")
 	.authors		= authors,
 	.word_size		= 32,
 	.context_size		= sizeof(struct platform_t),
+	.setfds			= &platform_setfds,
 	.update			= &platform_update,
 prng_end

@@ -9,6 +9,8 @@
 */
 
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "prng_desc.h"
 #include "utils/endian-neutral.h"
 #include "utils/mem.h"
@@ -53,7 +55,21 @@ __export_function struct k_prng_t* k_prng_init
 		err = K_ENOMEM;
 		goto k_prng_init_err;
 	}
-
+#ifndef __WINNT_
+	if (c->prng->setfds) {
+		c->fd_urandom = open("/dev/urandom", O_RDONLY);
+		if (c->fd_urandom == -1) {
+			err = K_ENORNDDEV;
+			goto k_prng_init_err;
+		}
+		c->fd_random = open("/dev/random", O_RDONLY);
+		if (c->fd_random == -1) {
+			err = K_ENORNDDEV;
+			goto k_prng_init_err;
+		}
+		c->prng->setfds(c->ctx, c->fd_random, c->fd_urandom);
+	}
+#endif
 	return c;
 
 k_prng_init_err:
@@ -66,6 +82,8 @@ __export_function void k_prng_finish
 (struct k_prng_t* c)
 {
 	if (c) {
+		close(c->fd_urandom);
+		close(c->fd_random);
 		if (c->ctx)
 			k_locked_free(c->ctx, c->alloced_ctxsize);
 		k_free(c);
