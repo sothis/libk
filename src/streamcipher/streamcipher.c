@@ -77,12 +77,14 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		return NULL;
 	}
 	size_t bs = k_bc_get_blocksize(c->blockcipher);
+	/* TODO: lock this memory */
 	c->partial_block = k_calloc(1, bs);
 	if (!c->partial_block) {
 		k_sc_finish(c);
 		k_error(K_ENOMEM);
 		return NULL;
 	}
+	/* TODO: lock this memory */
 	c->old_iv = k_calloc(1, bs);
 	if (!c->old_iv) {
 		k_sc_finish(c);
@@ -130,8 +132,10 @@ __export_function int32_t k_sc_set_key
 __export_function void k_sc_set_nonce
 (struct k_sc_t* c, const void* nonce)
 {
-	if (c->blockcipher)
+	if (c->blockcipher) {
+		c->have_partial_block = 0;
 		k_bcmode_set_iv(c->blockcipher, nonce);
+	}
 	// TODO: introduce nonce infrastructure for pure stream ciphers
 	// in order to be able to construct custom cryptosystems
 }
@@ -145,7 +149,7 @@ __export_function size_t k_sc_get_nonce_size
 	// in order to be able to construct custom cryptosystems
 	return 0;
 }
-
+#include <stdio.h>
 __export_function void k_sc_update
 (struct k_sc_t* c, const void* input, void* output, size_t bytes)
 {
@@ -159,10 +163,39 @@ __export_function void k_sc_update
 		 * k_sc_update will produce wrong output due to a non-matching
 		 * intermediate IV value */
 		size_t bs = k_bc_get_blocksize(c->blockcipher);
+
+		if (c->have_partial_block) {
+			size_t b =
+				(bytes > c->partial_remaining) ?
+				c->partial_remaining :
+				bytes;
+			uint8_t first_block_out[bs];
+			memset(first_block_out, 0, bs);
+
+			printf("processing partial block first\n");
+			printf("bytes total    : %lu\n", bytes);
+			printf("have           : %lu\n", c->partial_bytes);
+			printf("remaining free : %lu\n", c->partial_remaining);
+			printf("remaining proc : %lu\n", b);
+
+			k_bcmode_update(c->blockcipher, c->partial_block,
+				first_block_out, 1);
+
+			memcpy(output, first_block_out+c->partial_bytes, b);
+			c->partial_bytes += b;
+			bytes -= b;
+		}
+
 		size_t rem = bytes % bs;
 		k_bcmode_update(c->blockcipher, input, output, bytes/bs);
 		if (rem) {
 			uint8_t last_block_out[bs];
+
+			printf("processing partial block last\n");
+			printf("bytes total    : %lu\n", bytes);
+			printf("have           : %lu\n", c->partial_bytes);
+			printf("remaining free : %lu\n", c->partial_remaining);
+			printf("remaining proc : %lu\n", rem);
 
 			/* backup old iv */
 			const void* oiv = k_bcmode_get_iv(c->blockcipher);
@@ -174,10 +207,15 @@ __export_function void k_sc_update
 			k_bcmode_update(c->blockcipher, c->partial_block,
 				last_block_out, 1);
 			memcpy(output+bytes-rem, last_block_out, rem);
+			c->partial_bytes = rem;
+			c->partial_remaining = bs - rem;
 			c->have_partial_block = 1;
 			/* restore old iv */
 			k_bcmode_set_iv(c->blockcipher, c->old_iv);
-		} else
+		} else {
 			c->have_partial_block = 0;
+			c->partial_bytes = 0;
+			c->partial_remaining = 0;
+		}
 	}
 }

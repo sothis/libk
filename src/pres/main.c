@@ -97,7 +97,7 @@ static int import_directory(const char* directory, const char* filename)
 		.name		= filename,
 		.hashsum 	= HASHSUM_SKEIN_1024,
 		.hashsize	= 1024,
-#if 0
+#if 1
 		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
 		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
 		.keysize	= 1024,
