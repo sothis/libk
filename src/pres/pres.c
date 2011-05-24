@@ -246,6 +246,10 @@ __export_function int k_pres_add_file
 	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(pf->hash, buf, nread);
+		/* TODO: due to a major design flaw in k_sc_update,
+		 * nread has to be a multiple of the blocksize of the
+		 * used cipher, if it does not match, we can't decrypt
+		 * anymore. this does not affect the last processed block. */
 		if (pf->hdr.cipher)
 			k_sc_update(pf->scipher, buf, buf, nread);
 		while (total != nread) {
@@ -428,6 +432,33 @@ static inline int _addu64(uint64_t* res, uint64_t a, uint64_t b)
 	return -1;
 }
 
+static k_sc_t* _init_streamcipher
+(struct pres_file_header_t* hdr, const void* key)
+{
+	k_sc_t* c = 0;
+
+	if (hdr->ciphermode)
+		c = k_sc_init_with_blockcipher(hdr->cipher, hdr->ciphermode, 0);
+	else
+		c = k_sc_init(hdr->cipher);
+
+	if (!c)
+		return 0;
+
+	if (k_sc_set_key(c, key, hdr->keysize)) {
+		k_sc_finish(c);
+		c = 0;
+	}
+
+	return c;
+}
+
+static void _cryptonce(k_sc_t* c, void* mem, const void* nonce, size_t s)
+{
+	k_sc_set_nonce(c, nonce);
+	k_sc_update(c, mem, mem, s);
+}
+
 static int _open_pres(const char* name)
 {
 	struct stat st;
@@ -450,34 +481,24 @@ failed:
 	return -1;
 }
 
-static int _get_file_header(int fd, struct pres_file_header_t* hdr)
-{
-	struct mmap_t map;
-	if (pres_map(&map, fd, sz_file_header, 0))
-		return -1;
-	memcpy(hdr, map.mem, sz_file_header);
-	pres_unmap(&map);
-	return 0;
-}
-
-static int _verify_file_header(int fd, struct pres_file_header_t* hdr)
+static int _verify_file_header(struct pres_file_t* pf)
 {
 	struct stat st;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 	k_hash_t* hash = 0;
 	int res = 0;
-	int digest_bits = hdr->hashsize;
-	int hashfn = hdr->hashfunction;
+	int digest_bits = pf->hdr.hashsize;
+	int hashfn = pf->hdr.hashfunction;
 	size_t digest_bytes = (digest_bits + 7) / 8;
 
-	if (fstat(fd, &st))
+	if (fstat(pf->fd, &st))
 		goto invalid;
-	if (hdr->magic != PRES_MAGIC)
+	if (pf->hdr.magic != PRES_MAGIC)
 		goto invalid;
 	/* currently no back and forward compatibility */
-	if (hdr->version != PRES_VER)
+	if (pf->hdr.version != PRES_VER)
 		goto invalid;
-	if (hdr->filesize != st.st_size)
+	if (pf->hdr.filesize != st.st_size)
 		goto invalid;
 	if (!hashfn || hashfn > HASHSUM_MAX_SUPPORT)
 		goto invalid;
@@ -488,29 +509,29 @@ static int _verify_file_header(int fd, struct pres_file_header_t* hdr)
 	if (!hash)
 		goto invalid;
 	memset(digest_chk, 0, digest_bytes);
-	k_hash_update(hash, hdr, sz_header_digest);
+	k_hash_update(hash, &pf->hdr, sz_header_digest);
 	k_hash_final(hash, digest_chk);
-	if (memcmp(hdr->digest, digest_chk, digest_bytes))
+	if (memcmp(pf->hdr.digest, digest_chk, digest_bytes))
 		goto invalid;
 
-	if (hdr->ciphermode > BLK_CIPHER_MODE_MAX_SUPPORT)
+	if (pf->hdr.ciphermode > BLK_CIPHER_MODE_MAX_SUPPORT)
 		goto invalid;
 
-	if (hdr->ciphermode) {
-		if (!hdr->cipher || hdr->cipher > BLK_CIPHER_MAX_SUPPORT)
+	if (pf->hdr.ciphermode) {
+		if (!pf->hdr.cipher || pf->hdr.cipher > BLK_CIPHER_MAX_SUPPORT)
 			goto invalid;
-	} else if (hdr->cipher && hdr->cipher > STREAM_CIPHER_MAX_SUPPORT)
+	} else if (pf->hdr.cipher && pf->hdr.cipher > STREAM_CIPHER_MAX_SUPPORT)
 		goto invalid;
 
-	if (hdr->cipher && !hdr->keysize)
+	if (pf->hdr.cipher && !pf->hdr.keysize)
 		goto invalid;
 
 	uint64_t dhdr_end = 0;
-	if (_addu64(&dhdr_end, hdr->detached_header_start,
-		hdr->detached_header_size))
+	if (_addu64(&dhdr_end, pf->hdr.detached_header_start,
+		pf->hdr.detached_header_size))
 		goto invalid;
 
-	if (dhdr_end > hdr->filesize)
+	if (dhdr_end > pf->hdr.filesize)
 		goto invalid;
 
 	goto valid;
@@ -523,9 +544,205 @@ valid:
 	return res;
 }
 
-static int _init_streamcipher(struct pres_file_header_t* hdr, void* key)
+static int _get_file_header(struct pres_file_t* pf)
 {
-	if (!hdr->cipher)
+	struct mmap_t map;
+	if (pres_map(&map, pf->fd, sz_file_header, 0))
+		return -1;
+	memcpy(&pf->hdr, map.mem, sz_file_header);
+	pres_unmap(&map);
+
+	if (_verify_file_header(pf))
+		return -1;
+
+	return 0;
+}
+
+static int _verify_detached_header(struct pres_file_t* pf)
+{
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	k_hash_t* hash = 0;
+	int res = 0;
+	int digest_bits = pf->hdr.hashsize;
+	int hashfn = pf->hdr.hashfunction;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
+	hash = k_hash_init(hashfn, digest_bits);
+	if (!hash)
+		goto invalid;
+
+	memset(digest_chk, 0, digest_bytes);
+	k_hash_update(hash, &pf->dhdr, sz_dheader_digest);
+	k_hash_final(hash, digest_chk);
+	if (memcmp(pf->dhdr.digest, digest_chk, digest_bytes))
+		goto invalid;
+
+	uint64_t rtbl_end = 0;
+	if (_addu64(&rtbl_end, pf->dhdr.resource_table_start,
+		pf->dhdr.resource_table_size))
+		goto invalid;
+
+	if (rtbl_end > pf->hdr.filesize)
+		goto invalid;
+
+	goto valid;
+
+invalid:
+	res = -1;
+valid:
+	if (hash)
+		k_hash_finish(hash);
+	return res;
+}
+
+static int _get_detached_header(struct pres_file_t* pf)
+{
+	struct mmap_t map;
+	if (pres_map(&map, pf->fd, sz_detached_hdr, sz_file_header))
+		return -1;
+	memcpy(&pf->dhdr, map.mem, sz_detached_hdr);
+	pres_unmap(&map);
+
+	if (pf->scipher)
+		_cryptonce(pf->scipher, &pf->dhdr, pf->hdr.detached_header_iv,
+			sz_detached_hdr);
+
+	if (_verify_detached_header(pf))
+		return -1;
+
+	return 0;
+}
+
+static int _get_rtbl_entries(struct pres_file_t* pf)
+{
+	struct mmap_t map;
+	size_t entries_size = pf->rtbl->entries*sz_res_tbl_entry;
+	size_t new_size = sz_res_tbl + entries_size;
+	size_t entries_off = pf->dhdr.resource_table_start+sz_res_tbl;
+
+	void* t = realloc(pf->rtbl, new_size);
+	if (!t)
+		return -1;
+	pf->rtbl = t;
+
+	if (pres_map(&map, pf->fd, entries_size, entries_off))
+		return -1;
+
+	memcpy(pf->rtbl->table, map.mem, entries_size);
+	pres_unmap(&map);
+
+	if (pf->scipher)
+		k_sc_update(pf->scipher, pf->rtbl->table, pf->rtbl->table,
+			entries_size);
+
+	/* verify entries here */
+
+	return 0;
+}
+
+static int _verify_rtbl(struct pres_file_t* pf)
+{
+	int res = 0;
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	k_hash_t* hash = 0;
+	int digest_bits = pf->hdr.hashsize;
+	int hashfn = pf->hdr.hashfunction;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
+	hash = k_hash_init(hashfn, digest_bits);
+	if (!hash)
+		goto invalid;
+
+	memset(digest_chk, 0, digest_bytes);
+	k_hash_update(hash, pf->rtbl, sz_rtbl_digest);
+	k_hash_final(hash, digest_chk);
+	if (memcmp(pf->rtbl->digest, digest_chk, digest_bytes))
+		goto invalid;
+
+	uint64_t stringpool_end = 0;
+	if (_addu64(&stringpool_end, pf->rtbl->string_pool_start,
+		pf->rtbl->string_pool_size))
+		goto invalid;
+
+	if (stringpool_end > pf->hdr.filesize)
+		goto invalid;
+
+	uint64_t datapool_end = 0;
+	if (_addu64(&datapool_end, pf->rtbl->data_pool_start,
+		pf->rtbl->data_pool_size))
+		goto invalid;
+
+	if (datapool_end > pf->hdr.filesize)
+		goto invalid;
+
+	if (!pf->rtbl->entries)
+		goto invalid;
+
+	goto valid;
+invalid:
+	res = -1;
+valid:
+	if (hash)
+		k_hash_finish(hash);
+	return res;
+}
+
+static int _get_rtbl(struct pres_file_t* pf)
+{
+	struct mmap_t map;
+
+	pf->rtbl = calloc(1, sz_res_tbl);
+	if (!pf->rtbl)
+		goto fail;
+
+	if (pres_map(&map, pf->fd, sz_res_tbl, pf->dhdr.resource_table_start))
+		goto fail;
+	memcpy(pf->rtbl, map.mem, sz_res_tbl);
+	pres_unmap(&map);
+
+	if (pf->scipher)
+		_cryptonce(pf->scipher, pf->rtbl, pf->dhdr.resource_table_iv,
+			sz_res_tbl);
+
+	if (_verify_rtbl(pf))
+		goto fail;
+
+	if (_get_rtbl_entries(pf))
+		goto fail;
+
+	return 0;
+fail:
+	if (pf->rtbl) {
+		free(pf->rtbl);
+		pf->rtbl = 0;
+	}
+	return -1;
+}
+
+int _get_stringpool(struct pres_file_t* pf)
+{
+	struct mmap_t map;
+	if (pool_alloc(&pf->stringpool, 0))
+		return -1;
+
+	if (pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
+		pf->rtbl->string_pool_start)) {
+		pool_free(&pf->stringpool);
+		return -1;
+	}
+
+	if (pool_append(&pf->stringpool, map.mem, pf->rtbl->string_pool_size)) {
+		pool_free(&pf->stringpool);
+		pres_unmap(&map);
+		return -1;
+	}
+
+	pres_unmap(&map);
+
+	if (pf->scipher)
+		_cryptonce(pf->scipher, pf->stringpool.base,
+			pf->rtbl->string_pool_iv,
+			pf->stringpool.data_size);
 
 	return 0;
 }
@@ -540,118 +757,49 @@ static int _init_streamcipher(struct pres_file_header_t* hdr, void* key)
 __export_function int k_pres_open
 (struct pres_file_t* pf, const char* name, const void* key)
 {
-	struct mmap_t map;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 
 	memset(pf, 0, sizeof(struct pres_file_t));
+
 	pf->fd = _open_pres(name);
 	if (pf->fd == -1)
 		return -1;
-	if (_get_file_header(pf->fd, &pf->hdr)) {
+	if (_get_file_header(pf)) {
 		close(pf->fd);
 		return -1;
 	}
-	if (_verify_file_header(pf->fd, &pf->hdr)) {
-		close(pf->fd);
-		return -1;
-	}
-
-	/* following entities might be encrypted */
 	if (pf->hdr.cipher) {
-		if (pf->hdr.ciphermode)
-			pf->scipher = k_sc_init_with_blockcipher(pf->hdr.cipher,
-				pf->hdr.ciphermode, 0);
-		else
-			pf->scipher = k_sc_init(pf->hdr.cipher);
-		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
-
-		if (!pf->scipher ||
-		k_sc_set_key(pf->scipher, key, pf->hdr.keysize)) {
-			k_hash_finish(pf->hash);
+		pf->scipher = _init_streamcipher(&pf->hdr, key);
+		if (!pf->scipher) {
 			close(pf->fd);
-			if (pf->scipher)
-				k_sc_finish(pf->scipher);
 			return -1;
 		}
 	}
 
-	pres_map(&map, pf->fd, sz_detached_hdr, sz_file_header);
-	memcpy(&pf->dhdr, map.mem, sz_detached_hdr);
-	pres_unmap(&map);
-
-	if (pf->hdr.cipher) {
-		k_sc_set_nonce(pf->scipher, pf->hdr.detached_header_iv);
-		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, sz_detached_hdr);
-	}
-
-	k_hash_reset(pf->hash);
-	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
-	k_hash_final(pf->hash, digest_chk);
-	if (memcmp(pf->dhdr.digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
-		k_hash_finish(pf->hash);
-		close(pf->fd);
+	if (_get_detached_header(pf)) {
 		if (pf->scipher)
 			k_sc_finish(pf->scipher);
+		close(pf->fd);
 		return -1;
 	}
-
-	pf->rtbl = calloc(1, sz_res_tbl);
-	pres_map(&map, pf->fd, sz_res_tbl, pf->dhdr.resource_table_start);
-	memcpy(pf->rtbl, map.mem, sz_res_tbl);
-	pres_unmap(&map);
-
-	if (pf->hdr.cipher) {
-		k_sc_set_nonce(pf->scipher, pf->dhdr.resource_table_iv);
-		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, sz_res_tbl);
-	}
-
-	uint64_t entries = pf->rtbl->entries;
-	free(pf->rtbl);
-
-	pres_map(&map, pf->fd,
-		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry,
-		pf->dhdr.resource_table_start);
-	pf->rtbl = calloc(1,
-		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
-	memcpy(pf->rtbl, map.mem,
-		pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
-	pres_unmap(&map);
-
-	if (pf->hdr.cipher) {
-		k_sc_set_nonce(pf->scipher, pf->dhdr.resource_table_iv);
-		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl,
-			pf->dhdr.resource_table_size+entries*sz_res_tbl_entry);
-	}
-
-
-	k_hash_reset(pf->hash);
-	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
-	k_hash_final(pf->hash, digest_chk);
-	if (memcmp(pf->rtbl->digest, digest_chk, (pf->hdr.hashsize + 7) / 8)) {
-		k_hash_finish(pf->hash);
-		free(pf->rtbl);
-		close(pf->fd);
+	if (_get_rtbl(pf)) {
 		if (pf->scipher)
 			k_sc_finish(pf->scipher);
+		close(pf->fd);
 		return -1;
 	}
-
-	pool_alloc(&pf->stringpool, 0);
-	pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
-		pf->rtbl->string_pool_start);
-	pool_append(&pf->stringpool, map.mem, pf->rtbl->string_pool_size);
-	pres_unmap(&map);
-
-	if (pf->hdr.cipher) {
-		k_sc_set_nonce(pf->scipher, pf->rtbl->string_pool_iv);
-		k_sc_update(pf->scipher, pf->stringpool.base,
-			pf->stringpool.base, pf->stringpool.data_size);
+	if (_get_stringpool(pf)) {
+		if (pf->scipher)
+			k_sc_finish(pf->scipher);
+		close(pf->fd);
+		return -1;
 	}
 
 	uint64_t i = 0, e = pf->rtbl->entries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 	for (i = 0; i < e; ++i) {
 		size_t fn_off = table[i].filename_offset;
+		printf("o: %lu\n", fn_off);
 		const char* fn = pool_getmem(&pf->stringpool, fn_off);
 		size_t fns = strlen(fn)+1;
 

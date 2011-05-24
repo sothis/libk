@@ -135,6 +135,12 @@ __export_function void k_sc_update
 	if (c->cipher)
 		return c->cipher->update(c->ctx, input, output, bytes);
 	else {
+		/* TODO: this is broken. if we encrypt several bytes
+		 * in one step and decrypt them in more than one step with
+		 * 'bytes' being not a multiple of blocksize, the IV advances
+		 * ahead due to the padding bytes. therefore the next call to
+		 * k_sc_update will produce wrong output due to a non-matching
+		 * intermediate IV value */
 		size_t bs = k_bc_get_blocksize(c->blockcipher);
 		size_t rem = bytes % bs;
 		k_bcmode_update(c->blockcipher, input, output, bytes/bs);

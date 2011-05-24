@@ -184,6 +184,10 @@ static int export_all(const char* filename, const char* dir)
 		}
 
 		uint64_t s = k_pres_res_size(&r);
+		/* TODO: due to a major design flaw in k_sc_update the
+		 * mmap_window has to be a multiple of the blocksize of the
+		 * used cipher. this does not affect the last processed
+		 * block. */
 		uint64_t mmap_window = 8*1024*1024;
 		size_t niter = s / mmap_window;
 		size_t nlast = s % mmap_window;
