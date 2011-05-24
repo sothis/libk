@@ -528,7 +528,7 @@ static int _verify_file_header(struct pres_file_t* pf)
 
 	uint64_t dhdr_end = 0;
 	if (_addu64(&dhdr_end, pf->hdr.detached_header_start,
-		pf->hdr.detached_header_size))
+	pf->hdr.detached_header_size))
 		goto invalid;
 
 	if (dhdr_end > pf->hdr.filesize)
@@ -579,7 +579,7 @@ static int _verify_detached_header(struct pres_file_t* pf)
 
 	uint64_t rtbl_end = 0;
 	if (_addu64(&rtbl_end, pf->dhdr.resource_table_start,
-		pf->dhdr.resource_table_size))
+	pf->dhdr.resource_table_size))
 		goto invalid;
 
 	if (rtbl_end > pf->hdr.filesize)
@@ -613,6 +613,56 @@ static int _get_detached_header(struct pres_file_t* pf)
 	return 0;
 }
 
+static int _verify_rtbl_entries(struct pres_file_t* pf)
+{
+	int res = 0;
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	k_hash_t* hash = 0;
+	int digest_bits = pf->hdr.hashsize;
+	int hashfn = pf->hdr.hashfunction;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
+	hash = k_hash_init(hashfn, digest_bits);
+	if (!hash)
+		goto invalid;
+
+	/* TODO: maybe don't make this a hard error. just mark the
+	 * entry as corrupt and try to procceed as far as possible */
+	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
+		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
+		k_hash_reset(hash);
+		memset(digest_chk, 0, digest_bytes);
+		k_hash_update(hash, e, sz_rtblentry_digest);
+		k_hash_final(hash, digest_chk);
+		if (memcmp(e->digest, digest_chk, digest_bytes))
+			goto invalid;
+
+		uint64_t filename_end = 0;
+		if (_addu64(&filename_end,
+		e->filename_offset + pf->rtbl->string_pool_start,
+		e->filename_size))
+			goto invalid;
+		if (filename_end > pf->hdr.filesize)
+			goto invalid;
+
+		uint64_t data_end = 0;
+		if (_addu64(&data_end,
+		e->data_offset + pf->rtbl->data_pool_start,
+		e->data_size))
+			goto invalid;
+		if (data_end > pf->hdr.filesize)
+			goto invalid;
+	}
+
+	goto valid;
+invalid:
+	res = -1;
+valid:
+	if (hash)
+		k_hash_finish(hash);
+	return res;
+}
+
 static int _get_rtbl_entries(struct pres_file_t* pf)
 {
 	struct mmap_t map;
@@ -635,7 +685,8 @@ static int _get_rtbl_entries(struct pres_file_t* pf)
 		k_sc_update(pf->scipher, pf->rtbl->table, pf->rtbl->table,
 			entries_size);
 
-	/* verify entries here */
+	if (_verify_rtbl_entries(pf))
+		return -1;
 
 	return 0;
 }
@@ -661,7 +712,7 @@ static int _verify_rtbl(struct pres_file_t* pf)
 
 	uint64_t stringpool_end = 0;
 	if (_addu64(&stringpool_end, pf->rtbl->string_pool_start,
-		pf->rtbl->string_pool_size))
+	pf->rtbl->string_pool_size))
 		goto invalid;
 
 	if (stringpool_end > pf->hdr.filesize)
@@ -669,7 +720,7 @@ static int _verify_rtbl(struct pres_file_t* pf)
 
 	uint64_t datapool_end = 0;
 	if (_addu64(&datapool_end, pf->rtbl->data_pool_start,
-		pf->rtbl->data_pool_size))
+	pf->rtbl->data_pool_size))
 		goto invalid;
 
 	if (datapool_end > pf->hdr.filesize)
@@ -719,7 +770,48 @@ fail:
 	return -1;
 }
 
-int _get_stringpool(struct pres_file_t* pf)
+static int _verify_stringpool(struct pres_file_t* pf)
+{
+	int res = 0;
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	k_hash_t* hash = 0;
+	int digest_bits = pf->hdr.hashsize;
+	int hashfn = pf->hdr.hashfunction;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
+	hash = k_hash_init(hashfn, digest_bits);
+	if (!hash)
+		goto invalid;
+
+	/* TODO: maybe don't make this a hard error. if the data is valid, we
+	 * still can export it, just the name is lost. */
+	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
+		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
+		uint64_t fn_off = e->filename_offset;
+		uint64_t base_off = e->basename_offset;
+		const char* fn = pool_getmem(&pf->stringpool, fn_off);
+		uint64_t fns = strlen(fn)+1;
+		if (base_off >= fns-1)
+			goto invalid;
+
+		k_hash_reset(hash);
+		memset(digest_chk, 0, digest_bytes);
+		k_hash_update(hash, fn, fns);
+		k_hash_final(hash, digest_chk);
+		if (memcmp(e->filename_digest, digest_chk, digest_bytes))
+			goto invalid;
+	}
+
+	goto valid;
+invalid:
+	res = -1;
+valid:
+	if (hash)
+		k_hash_finish(hash);
+	return res;
+}
+
+static int _get_stringpool(struct pres_file_t* pf)
 {
 	struct mmap_t map;
 	if (pool_alloc(&pf->stringpool, 0))
@@ -744,21 +836,17 @@ int _get_stringpool(struct pres_file_t* pf)
 			pf->rtbl->string_pool_iv,
 			pf->stringpool.data_size);
 
+	if (_verify_stringpool(pf)) {
+		pool_free(&pf->stringpool);
+		return -1;
+	}
+
 	return 0;
 }
 
-/* TODO:
- * - check offset+size against filesize, don't forget overflow checking
- * - if some digest checks fail, it might be still possible to access a valid
- *   resource. only if the entry in the resource table is corrupt we consider
- *   the resource as unaccessible
- * - cleanup error handling
- * */
 __export_function int k_pres_open
 (struct pres_file_t* pf, const char* name, const void* key)
 {
-	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-
 	memset(pf, 0, sizeof(struct pres_file_t));
 
 	pf->fd = _open_pres(name);
@@ -776,63 +864,19 @@ __export_function int k_pres_open
 		}
 	}
 
-	if (_get_detached_header(pf)) {
-		if (pf->scipher)
-			k_sc_finish(pf->scipher);
-		close(pf->fd);
-		return -1;
-	}
-	if (_get_rtbl(pf)) {
-		if (pf->scipher)
-			k_sc_finish(pf->scipher);
-		close(pf->fd);
-		return -1;
-	}
-	if (_get_stringpool(pf)) {
-		if (pf->scipher)
-			k_sc_finish(pf->scipher);
-		close(pf->fd);
-		return -1;
-	}
-
-	uint64_t i = 0, e = pf->rtbl->entries;
-	struct pres_resource_table_entry_t* table = pf->rtbl->table;
-	for (i = 0; i < e; ++i) {
-		size_t fn_off = table[i].filename_offset;
-		printf("o: %lu\n", fn_off);
-		const char* fn = pool_getmem(&pf->stringpool, fn_off);
-		size_t fns = strlen(fn)+1;
-
-		k_hash_reset(pf->hash);
-		k_hash_update(pf->hash, &table[i], sz_rtblentry_digest);
-		k_hash_final(pf->hash, digest_chk);
-		if (memcmp(table[i].digest, digest_chk,
-		(pf->hdr.hashsize + 7) / 8)) {
-			k_hash_finish(pf->hash);
-			free(pf->rtbl);
-			pool_free(&pf->stringpool);
-			close(pf->fd);
-			if (pf->scipher)
-				k_sc_finish(pf->scipher);
-			return -1;
-		}
-
-		k_hash_reset(pf->hash);
-		k_hash_update(pf->hash, fn, fns);
-		k_hash_final(pf->hash, digest_chk);
-		if (memcmp(table[i].filename_digest, digest_chk,
-		(pf->hdr.hashsize + 7) / 8)) {
-			k_hash_finish(pf->hash);
-			free(pf->rtbl);
-			pool_free(&pf->stringpool);
-			close(pf->fd);
-			if (pf->scipher)
-				k_sc_finish(pf->scipher);
-			return -1;
-		}
-	}
+	if (_get_detached_header(pf))
+		goto failed;
+	if (_get_rtbl(pf))
+		goto failed;
+	if (_get_stringpool(pf))
+		goto failed;
 
 	return 0;
+failed:
+	if (pf->scipher)
+			k_sc_finish(pf->scipher);
+	close(pf->fd);
+	return -1;
 }
 
 
