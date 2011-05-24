@@ -31,11 +31,11 @@ static void platform_setfds(void* state, int fd_random, int fd_urandom)
 
 static void platform_update(void* state, void* output)
 {
-	struct platform_t* c = state;
 	uint32_t r = 0;
 #ifdef __WINNT__
 	rand_s(&r);
 #else
+	struct platform_t* c = state;
 	size_t total = 0;
 	ssize_t nread;
 	while ((nread = read(c->fd_urandom, &r, sizeof(uint32_t))) > 0) {

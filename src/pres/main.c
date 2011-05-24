@@ -25,6 +25,7 @@
 #endif
 
 #include <libk/libk.h>
+#include "utils/tfile.h"
 
 #ifndef __WINNT__
 static void __term_handler(int sig, siginfo_t* info, void* unused)
@@ -177,6 +178,7 @@ static int export_all(const char* filename, const char* dir)
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
 
+next:
 	for (uint64_t i = 1; i <= e; ++i) {
 		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
 		printf("exporting '%s'\n", name);
@@ -186,9 +188,9 @@ static int export_all(const char* filename, const char* dir)
 		struct pres_res_t r;
 		k_pres_res_by_id(&_cur_pres, &r, i);
 
-		int fd = open(name, O_RDWR|O_CREAT, 0400);
+		int fd = tcreat(name, 0400);
 		if (fd == -1) {
-			perror("open");
+			perror("tcreat");
 			exit(1);
 		}
 
@@ -196,6 +198,7 @@ static int export_all(const char* filename, const char* dir)
 		uint64_t mmap_window = 16*1024*1024;
 		size_t niter = s / mmap_window;
 		size_t nlast = s % mmap_window;
+
 
 		for (uint64_t i = 0; i < niter; ++i) {
 			void* m = k_pres_res_map(&r, mmap_window,
@@ -206,9 +209,10 @@ static int export_all(const char* filename, const char* dir)
 				nwritten = write(fd, m + total,
 					mmap_window - total);
 				if (nwritten < 0) {
-					close(fd);
 					perror("write");
-					exit(1);
+					k_pres_res_unmap(&r);
+					trollback_and_close(fd);
+					goto next;
 				}
 				total += nwritten;
 			}
@@ -222,18 +226,17 @@ static int export_all(const char* filename, const char* dir)
 			while (total != nlast) {
 				nwritten = write(fd, m + total, nlast - total);
 				if (nwritten < 0) {
-					close(fd);
 					perror("write");
-					exit(1);
+					k_pres_res_unmap(&r);
+					trollback_and_close(fd);
+					goto next;
 				}
 				total += nwritten;
 			}
 			k_pres_res_unmap(&r);
 		}
 
-
-		fsync(fd);
-		close(fd);
+		tcommit_and_close(fd);
 	}
 
 	if (k_pres_close(&_cur_pres)) {

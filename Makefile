@@ -132,6 +132,8 @@ SRC		+= ./src/tests/blockciphermodes.c
 SRC		+= ./src/pres/pres.c
 
 SRCPRES		+= ./src/pres/main.c
+SRCPRES		+= ./src/utils/tfile.c
+SRCPRES		+= ./src/utils/mempool.c
 ifdef PLAT_WINNT
 SRCPRES		+= ./src/utils/ntwrap.c
 endif
