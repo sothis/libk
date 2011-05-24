@@ -92,7 +92,7 @@ namespace nlibktest
 	{
 		public new bool Test()
 		{
-			bool enc = false, dec = false;
+			bool enc = false, dec = false, dec2 = false;
 			byte[] ciphertext = null;
 			byte[] plaintext = null;
 
@@ -101,8 +101,8 @@ namespace nlibktest
 				cipher.SetKey(_key);
 				ciphertext = new byte[_plaintext.Length];
 
-				byte[] c = new byte[1];
-				byte[] p = new byte[1];
+				byte[] c = new byte[64];
+				byte[] p = new byte[64];
 				/* test byte-for-byte updating */
 				for (int s = 0; s < _plaintext.Length; ++s) {
 					System.Buffer.BlockCopy(_plaintext, s, p, 0, 1);
@@ -117,8 +117,38 @@ namespace nlibktest
 				plaintext = new byte[_ciphertext.Length];
 				cipher.Update(_ciphertext, plaintext);
 				dec = PlainMatch(plaintext);
+
+				/* test mix-sized block updating */
+				if (_ciphertext.Length > 48) {
+					cipher.SetNonce(_iv);
+
+					System.Buffer.BlockCopy(_ciphertext, 0, c, 0, 24);
+					cipher.Update(c, p, 24);
+					System.Buffer.BlockCopy(p, 0, plaintext, 0, 24);
+
+					System.Buffer.BlockCopy(_ciphertext, 24, c, 0, 6);
+					cipher.Update(c, p, 6);
+					System.Buffer.BlockCopy(p, 0, plaintext, 24, 6);
+
+					System.Buffer.BlockCopy(_ciphertext, 30, c, 0, 5);
+					cipher.Update(c, p, 5);
+					System.Buffer.BlockCopy(p, 0, plaintext, 30, 5);
+
+					System.Buffer.BlockCopy(_ciphertext, 35, c, 0, 12);
+					cipher.Update(c, p, 12);
+					System.Buffer.BlockCopy(p, 0, plaintext, 35, 12);
+
+					int remaining = _ciphertext.Length - 6 - 24 - 5 - 12;
+					for (int s = 0; s < remaining; ++s) {
+						System.Buffer.BlockCopy(_ciphertext, s+6+24+5+12, c, 0, 1);
+						cipher.Update(c, p, 1);
+						System.Buffer.BlockCopy(p, 0, plaintext, s+6+24+5+12, 1);
+					}
+					dec2 = PlainMatch(plaintext);
+				}
+				else dec2 = true;
 			}
-			return enc && dec;
+			return enc && dec && dec2;
 		}
 	}
 }
