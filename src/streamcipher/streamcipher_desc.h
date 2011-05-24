@@ -64,6 +64,7 @@ struct k_sc_t {
 	void*					ctx;
 	size_t					alloced_ctxsize;
 	void*					partial_block;
+	void*					old_iv;
 	int					have_partial_block;
 } __attribute__((_section_alignment));
 

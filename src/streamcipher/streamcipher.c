@@ -83,6 +83,12 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		k_error(K_ENOMEM);
 		return NULL;
 	}
+	c->old_iv = k_calloc(1, bs);
+	if (!c->old_iv) {
+		k_sc_finish(c);
+		k_error(K_ENOMEM);
+		return NULL;
+	}
 	if (k_bcmode_set_mode(c->blockcipher, mode, max_workers)) {
 		k_sc_finish(c);
 		return NULL;
@@ -99,6 +105,8 @@ __export_function void k_sc_finish
 			k_bc_finish(c->blockcipher);
 		if (c->partial_block)
 			k_free(c->partial_block);
+		if (c->old_iv)
+			k_free(c->old_iv);
 		if (c->ctx)
 			k_locked_free(c->ctx, c->alloced_ctxsize);
 		k_free(c);
@@ -154,14 +162,15 @@ __export_function void k_sc_update
 		size_t rem = bytes % bs;
 		k_bcmode_update(c->blockcipher, input, output, bytes/bs);
 		if (rem) {
-			uint8_t last_block[bs];
 			uint8_t last_block_out[bs];
-			memset(last_block, 0, bs);
+			memset(c->partial_block, 0, bs);
 			memset(last_block_out, 0, bs);
-			memcpy(last_block, input+bytes-rem, rem);
-			k_bcmode_update(c->blockcipher, last_block,
+			memcpy(c->partial_block, input+bytes-rem, rem);
+			k_bcmode_update(c->blockcipher, c->partial_block,
 				last_block_out, 1);
 			memcpy(output+bytes-rem, last_block_out, rem);
-		}
+			c->have_partial_block = 1;
+		} else
+			c->have_partial_block = 0;
 	}
 }
