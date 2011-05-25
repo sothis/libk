@@ -18,6 +18,7 @@
 
 #ifndef __WINNT__
 #include <ftw.h>
+#include <termios.h>
 #define MKDIR_MODE ,0700
 #else
 #include "utils/ntwrap.h"
@@ -89,6 +90,67 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 
 	return FTW_CONTINUE;
 }
+
+char* get_pass(const char* prompt)
+{
+	size_t n = 1024;
+	char* pass = calloc(n+1, 1);
+	struct termios old, new;
+	int nread;
+
+
+	/* TODO: this is error-prone when sending a signal while being
+	 * in getline(). */
+	if (tcgetattr(fileno(stdin), &old) != 0)
+		return 0;
+	new = old;
+	new.c_lflag &= ~ECHO;
+	if (tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0)
+		return 0;
+
+	printf(prompt);
+	fflush(stdout);
+	fflush(stdin);
+	nread = getline(&pass, &n, stdin);
+
+	tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+	printf("\n");
+	fflush(stdout);
+	fflush(stdin);
+
+	if (nread == -1) {
+		printf("can't create safe password prompt\n");
+		free(pass);
+		return 0;
+	}
+	pass[nread-1] = 0;
+	return pass;
+}
+#else
+char password[100];
+void get_pass(void)
+{
+	int ab=0;
+	char a;
+	while(1) {
+		fflush(stdin);
+		a = getch();
+		if (a>47 && a<123) {
+		password[ab]=a;
+		ab++;
+		}
+		else if(a==8)
+		{
+			if(ab>0)
+			ab--;
+		}
+		else if(a==13)
+		{
+			password[ab]='\0';
+			break;
+		}
+	}
+}
 #endif
 
 static int import_directory
@@ -111,6 +173,7 @@ static int import_directory
 		perror("pres_create");
 		return -1;
 	}
+	/* clear/free password here */
 #ifndef __WINNT__
 	/* stay within the same filesystem, do not follow symlinks */
 	if (nftw(directory, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS))
@@ -167,13 +230,19 @@ static int export_all(const char* filename, const char* dir)
 
 	if (r) {
 		/* retrieve password here */
-		pass = "geheim1234";
+		pass = get_pass("enter password  : ");
+		if (!pass) {
+			perror("get_pass");
+			return -1;
+		}
 	}
 
 	if (k_pres_open(&_cur_pres, filename, pass)) {
 		perror("pres_open");
 		return -1;
 	}
+	if (pass)
+		free(pass);
 
 	mkdir(dir MKDIR_MODE);
 	if (chdir(dir)) {
@@ -251,14 +320,33 @@ next:
 	return 0;
 }
 
+static void print_help(void)
+{
+	k_version_print();
+	fprintf(stderr, " ktool test                    " \
+		"- run unittests\n");
+	fprintf(stderr, " ktool imp  <indir> <outfile>  " \
+		"- import directory into pres container\n");
+	fprintf(stderr, " ktool imps <indir> <outfile>  " \
+		"- import directory into encrypted pres container\n");
+	fprintf(stderr, " ktool exp  <infile> <outdir>  " \
+		"- export everything from pres container\n");
+	fprintf(stderr, " ktool version                 " \
+		"- print version information\n");
+	fprintf(stderr, " ktool help                    " \
+		"- print this\n");
+}
+
 int main(int argc, char* argv[], char* envp[])
 {
 	__init();
 
-	if (argc < 2)
+	if (argc < 2) {
+		print_help();
 		return -1;
+	}
 
-	if (!strcmp(argv[1], "import") && (argc > 3)) {
+	if (!strcmp(argv[1], "imp") && (argc > 3)) {
 		size_t s = strlen(argv[2]);
 		/* TODO: introduce failsafe path resolution */
 		/* remove trailing slashes */
@@ -269,12 +357,41 @@ int main(int argc, char* argv[], char* envp[])
 				last--;
 			}
 		}
-		/* get password here */
-		return import_directory(argv[2], argv[3], "geheim1234");
+		return import_directory(argv[2], argv[3], 0);
 	}
-	if (!strcmp(argv[1], "export-all") && (argc > 3))
+	if (!strcmp(argv[1], "imps") && (argc > 3)) {
+		size_t s = strlen(argv[2]);
+		/* TODO: introduce failsafe path resolution */
+		/* remove trailing slashes */
+		if (s > 0 && argv[2][s-1] == '/') {
+			char* last = argv[2] + s - 1;
+			while (*last == '/') {
+				*last = 0;
+				last--;
+			}
+		}
+		char* p = get_pass("enter password  : ");
+		if (!p)
+			return -1;
+		char* p2 = get_pass("retype password : ");
+		if (!p2) {
+			free(p);
+			return -1;
+		}
+		if (strcmp(p, p2)) {
+			printf("passwords do not match\n");
+			free(p);
+			free(p2);
+			return -1;
+		}
+		free(p2);
+		int res = import_directory(argv[2], argv[3], p);
+		free(p);
+		return res;
+	}
+	if (!strcmp(argv[1], "exp") && (argc > 3))
 		return export_all(argv[2], argv[3]);
-	if (!strcmp(argv[1], "--test")) {
+	if (!strcmp(argv[1], "test")) {
 		int failed = k_run_unittests(1);
 		if (failed)
 			printf("failed unittests: %u\n", failed);
@@ -282,9 +399,14 @@ int main(int argc, char* argv[], char* envp[])
 			printf("passed all unittests\n");
 		return failed;
 	}
-	if (!strcmp(argv[1], "--version")) {
+	if (!strcmp(argv[1], "version")) {
 		k_version_print();
 		return 0;
 	}
+	if (!strcmp(argv[1], "help")) {
+		print_help();
+		return 0;
+	}
+	print_help();
 	return -1;
 }
