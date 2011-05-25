@@ -91,19 +91,21 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 }
 #endif
 
-static int import_directory(const char* directory, const char* filename)
+static int import_directory
+(const char* directory, const char* filename, const char* pass)
 {
 	struct pres_options_t o = {
 		.name		= filename,
 		.hashsum 	= HASHSUM_SKEIN_1024,
 		.hashsize	= 1024,
-#if 1
-		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
-		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
-		.keysize	= 1024,
-		.pass		= "geheim1234"
-#endif
 	};
+
+	if (pass) {
+		o.blockcipher = BLK_CIPHER_THREEFISH_1024;
+		o.ciphermode = BLK_CIPHER_STREAMMODE_CTR;
+		o.keysize = 1024;
+		o.pass = pass;
+	}
 
 	if (k_pres_create(&_cur_pres, &o)) {
 		perror("pres_create");
@@ -156,7 +158,19 @@ static void create_dirs(const char* path)
 
 static int export_all(const char* filename, const char* dir)
 {
-	if (k_pres_open_pass(&_cur_pres, filename, "geheim1234")) {
+	char* pass = 0;
+	int r = k_pres_needs_pass(filename);
+	if (r < 0) {
+		perror("k_pres_needs_pass");
+		return -1;
+	}
+
+	if (r) {
+		/* retrieve password here */
+		pass = "geheim1234";
+	}
+
+	if (k_pres_open(&_cur_pres, filename, pass)) {
 		perror("pres_open");
 		return -1;
 	}
@@ -255,7 +269,8 @@ int main(int argc, char* argv[], char* envp[])
 				last--;
 			}
 		}
-		return import_directory(argv[2], argv[3]);
+		/* get password here */
+		return import_directory(argv[2], argv[3], "geheim1234");
 	}
 	if (!strcmp(argv[1], "export-all") && (argc > 3))
 		return export_all(argv[2], argv[3]);

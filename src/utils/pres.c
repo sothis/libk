@@ -640,7 +640,7 @@ static int _get_stringpool(struct pres_file_t* pf)
 	return 0;
 }
 
-__export_function int k_pres_open
+static int _pres_open_key
 (struct pres_file_t* pf, const char* name, const void* key)
 {
 	memset(pf, 0, sizeof(struct pres_file_t));
@@ -652,6 +652,8 @@ __export_function int k_pres_open
 	if (_get_file_header(pf))
 		goto failed;
 	if (pf->hdr.cipher) {
+		if (!key)
+			goto failed;
 		pf->scipher = _init_streamcipher(&pf->hdr, key);
 		if (!pf->scipher)
 			goto failed;
@@ -674,7 +676,26 @@ failed:
 	return -1;
 }
 
-__export_function int k_pres_open_pass
+__export_function int k_pres_needs_pass(const char* name)
+{
+	struct pres_file_t pf;
+	memset(&pf, 0, sizeof(struct pres_file_t));
+
+	pf.fd = _open_pres(name);
+	if (pf.fd == -1)
+		return -1;
+	if (_get_file_header(&pf)) {
+		close(pf.fd);
+		return -1;
+	}
+	close(pf.fd);
+
+	if (pf.hdr.cipher)
+		return 1;
+	return 0;
+}
+
+__export_function int k_pres_open
 (struct pres_file_t* pf, const char* name, const char* pass)
 {
 	void* key = 0;
@@ -690,10 +711,10 @@ __export_function int k_pres_open_pass
 	}
 	close(pf->fd);
 
-	if (pf->hdr.cipher)
+	if (pass)
 		key = _k_key_derive_simple1024(pass, pf->hdr.kdf_salt, 100000);
 
-	res = k_pres_open(pf, name, key);
+	res = _pres_open_key(pf, name, key);
 	free(key);
 	return res;
 }
