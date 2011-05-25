@@ -10,6 +10,7 @@
 
 #include <libk/libk.h>
 #include "utils/sections.h"
+#include "utils/err.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -279,6 +280,7 @@ failed:
 
 static int _verify_file_header(struct pres_file_t* pf)
 {
+	enum k_error_e err = K_ESUCCESS;
 	struct stat st;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 	k_hash_t* hash = 0;
@@ -307,8 +309,10 @@ static int _verify_file_header(struct pres_file_t* pf)
 	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(hash, &pf->hdr, sz_header_digest);
 	k_hash_final(hash, digest_chk);
-	if (memcmp(pf->hdr.digest, digest_chk, digest_bytes))
+	if (memcmp(pf->hdr.digest, digest_chk, digest_bytes)) {
+		err = K_EWRONGDIGEST_FHDR;
 		goto invalid;
+	}
 
 	if (pf->hdr.ciphermode > BLK_CIPHER_MODE_MAX_SUPPORT)
 		goto invalid;
@@ -333,7 +337,10 @@ static int _verify_file_header(struct pres_file_t* pf)
 	goto valid;
 
 invalid:
-	res = -1;
+	if (hash)
+		k_hash_finish(hash);
+	k_error(err);
+	return -1;
 valid:
 	if (hash)
 		k_hash_finish(hash);
@@ -356,6 +363,7 @@ static int _get_file_header(struct pres_file_t* pf)
 
 static int _verify_detached_header(struct pres_file_t* pf)
 {
+	enum k_error_e err = K_ESUCCESS;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 	k_hash_t* hash = 0;
 	int res = 0;
@@ -370,8 +378,10 @@ static int _verify_detached_header(struct pres_file_t* pf)
 	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(hash, &pf->dhdr, sz_dheader_digest);
 	k_hash_final(hash, digest_chk);
-	if (memcmp(pf->dhdr.digest, digest_chk, digest_bytes))
+	if (memcmp(pf->dhdr.digest, digest_chk, digest_bytes)) {
+		err = K_EWRONGDIGEST_DHDR;
 		goto invalid;
+	}
 
 	uint64_t rtbl_end = 0;
 	if (_addu64(&rtbl_end, pf->dhdr.resource_table_start,
@@ -384,7 +394,10 @@ static int _verify_detached_header(struct pres_file_t* pf)
 	goto valid;
 
 invalid:
-	res = -1;
+	if (hash)
+		k_hash_finish(hash);
+	k_error(err);
+	return -1;
 valid:
 	if (hash)
 		k_hash_finish(hash);
@@ -712,7 +725,8 @@ __export_function int k_pres_open
 	close(pf->fd);
 
 	if (pass)
-		key = _k_key_derive_simple1024(pass, pf->hdr.kdf_salt, 100000);
+		key = _k_key_derive_simple1024(pass,
+			pf->hdr.kdf_salt, 3000000);
 
 	res = _pres_open_key(pf, name, key);
 	free(key);
@@ -783,7 +797,7 @@ __export_function int k_pres_create
 			k_prng_update(prng,pf->hdr.kdf_salt,PRES_MAX_IV_LENGTH);
 			k_prng_finish(prng);
 			void* key = _k_key_derive_simple1024(opt->pass,
-				pf->hdr.kdf_salt, 100000);
+				pf->hdr.kdf_salt, 3000000);
 			if (!key)
 				goto err_out;
 			pf->scipher = _init_streamcipher(&pf->hdr, key);

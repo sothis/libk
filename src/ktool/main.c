@@ -357,6 +357,10 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
+		#ifdef __WINNT__
+			printf("not yet implemented.\n");
+			return -1;
+		#endif
 		size_t s = strlen(argv[2]);
 		/* TODO: introduce failsafe path resolution */
 		/* remove trailing slashes */
@@ -370,6 +374,10 @@ int main(int argc, char* argv[], char* envp[])
 		return import_directory(argv[2], argv[3], 0);
 	}
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
+		#ifdef __WINNT__
+			printf("not yet implemented.\n");
+			return -1;
+		#endif
 		size_t s = strlen(argv[2]);
 		/* TODO: introduce failsafe path resolution */
 		/* remove trailing slashes */
