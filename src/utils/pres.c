@@ -644,20 +644,17 @@ __export_function int k_pres_open
 (struct pres_file_t* pf, const char* name, const void* key)
 {
 	memset(pf, 0, sizeof(struct pres_file_t));
+	pf->fd = -1;
 
 	pf->fd = _open_pres(name);
 	if (pf->fd == -1)
-		return -1;
-	if (_get_file_header(pf)) {
-		close(pf->fd);
-		return -1;
-	}
+		goto failed;
+	if (_get_file_header(pf))
+		goto failed;
 	if (pf->hdr.cipher) {
 		pf->scipher = _init_streamcipher(&pf->hdr, key);
-		if (!pf->scipher) {
-			close(pf->fd);
-			return -1;
-		}
+		if (!pf->scipher)
+			goto failed;
 	}
 
 	if (_get_detached_header(pf))
@@ -667,11 +664,13 @@ __export_function int k_pres_open
 	if (_get_stringpool(pf))
 		goto failed;
 
+	pf->is_open = 1;
 	return 0;
 failed:
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
-	close(pf->fd);
+	if (pf->fd != -1)
+		close(pf->fd);
 	return -1;
 }
 
@@ -788,6 +787,8 @@ __export_function int k_pres_create
 	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
 		goto err_out;
 
+	pf->is_open = 1;
+	pf->is_writable = 1;
 	return 0;
 
 err_out:
@@ -804,7 +805,7 @@ err_out:
 	return -1;
 }
 
-__export_function int k_pres_commit_and_close(struct pres_file_t* pf)
+static int _commit_and_close(struct pres_file_t* pf)
 {
 	uint8_t dhdr_nonce[PRES_MAX_IV_LENGTH];
 	uint8_t rtbl_nonce[PRES_MAX_IV_LENGTH];
@@ -910,6 +911,7 @@ out:
 		pool_free(&pf->stringpool);
 	if (pf->rtbl)
 		free(pf->rtbl);
+	memset(pf, 0, sizeof(struct pres_file_t));
 	return res;
 }
 
@@ -990,13 +992,17 @@ __export_function void k_pres_res_unmap
 	pres_unmap(&res->map);
 }
 
-
 __export_function int k_pres_close(struct pres_file_t* pf)
 {
+	if (!pf->is_open)
+		return -1;
+	if (pf->is_writable)
+		return _commit_and_close(pf);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
 	close(pf->fd);
 	pool_free(&pf->stringpool);
 	free(pf->rtbl);
+	memset(pf, 0, sizeof(struct pres_file_t));
 	return 0;
 }

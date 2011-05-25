@@ -114,8 +114,8 @@ static int import_directory(const char* directory, const char* filename)
 	if (nftw(directory, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS))
 		return -1;
 #endif
-	if (k_pres_commit_and_close(&_cur_pres)) {
-		perror("pres_commit_and_close");
+	if (k_pres_close(&_cur_pres)) {
+		perror("pres_close");
 		return -1;
 	}
 	return 0;
