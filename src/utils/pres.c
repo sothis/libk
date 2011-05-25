@@ -124,28 +124,49 @@ __export_function int k_pres_create
 		pf->scipher = k_sc_init(opt->streamcipher);
 	}
 
-	if (pf->hdr.cipher && !opt->key) {
-		k_trollback_and_close(pf->fd);
-		free(pf->rtbl);
-		k_hash_finish(pf->hash);
-		return -1;
-	}
 	if (pf->hdr.cipher && !pf->scipher) {
 		k_trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);
 		return -1;
 	}
-	if (pf->hdr.cipher &&
-	k_sc_set_key(pf->scipher, opt->key, opt->keysize)) {
-		k_trollback_and_close(pf->fd);
-		free(pf->rtbl);
-		k_hash_finish(pf->hash);
-		return -1;
+	if (pf->hdr.cipher) {
+		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
+
+		if (opt->key &&
+		k_sc_set_key(pf->scipher, opt->key, opt->keysize)) {
+			k_trollback_and_close(pf->fd);
+			free(pf->rtbl);
+			k_hash_finish(pf->hash);
+			return -1;
+		} else if (opt->pass) {
+			k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
+			if (!prng) {
+				k_trollback_and_close(pf->fd);
+				free(pf->rtbl);
+				k_hash_finish(pf->hash);
+				return -1;
+			}
+			k_prng_update(prng,pf->hdr.kdf_salt,PRES_MAX_IV_LENGTH);
+			k_prng_finish(prng);
+			void* key = _k_key_derive_simple1024(opt->pass,
+				pf->hdr.kdf_salt, 100000);
+			if (k_sc_set_key(pf->scipher, key, opt->keysize)) {
+				k_trollback_and_close(pf->fd);
+				free(pf->rtbl);
+				k_hash_finish(pf->hash);
+				free(key);
+				return -1;
+			}
+			free(key);
+		} else {
+			k_trollback_and_close(pf->fd);
+			free(pf->rtbl);
+			k_hash_finish(pf->hash);
+		}
+
 	}
 
-	if (pf->hdr.cipher)
-		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
 
 	return 0;
 }
@@ -881,6 +902,26 @@ failed:
 	return -1;
 }
 
+__export_function int k_pres_open_pass
+(struct pres_file_t* pf, const char* name, const char* pass)
+{
+	memset(pf, 0, sizeof(struct pres_file_t));
+
+	pf->fd = _open_pres(name);
+	if (pf->fd == -1)
+		return -1;
+	if (_get_file_header(pf)) {
+		close(pf->fd);
+		return -1;
+	}
+	close(pf->fd);
+
+	void* key = _k_key_derive_simple1024(pass, pf->hdr.kdf_salt, 100000);
+
+	int res = k_pres_open(pf, name, key);
+	free(key);
+	return res;
+}
 
 __export_function uint64_t k_pres_res_count(struct pres_file_t* pf)
 {

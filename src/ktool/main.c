@@ -101,10 +101,7 @@ static int import_directory(const char* directory, const char* filename)
 		.blockcipher	= BLK_CIPHER_THREEFISH_1024,
 		.ciphermode	= BLK_CIPHER_STREAMMODE_CTR,
 		.keysize	= 1024,
-		.key		=	"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
-					"00000000000000000000000000000000"
+		.pass		= "geheim1234"
 #endif
 	};
 
@@ -159,12 +156,7 @@ static void create_dirs(const char* path)
 
 static int export_all(const char* filename, const char* dir)
 {
-	const char* key =	"00000000000000000000000000000000"
-				"00000000000000000000000000000000"
-				"00000000000000000000000000000000"
-				"00000000000000000000000000000000";
-
-	if (k_pres_open(&_cur_pres, filename, key)) {
+	if (k_pres_open_pass(&_cur_pres, filename, "geheim1234")) {
 		perror("pres_open");
 		return -1;
 	}

@@ -40,5 +40,7 @@ extern void k_version_print
 extern const char* k_version_get
 (void);
 
+extern void* _k_key_derive_simple1024
+(const char* pass,void* salt,uint64_t iter);
 
 #endif /* _LIBK_H */

@@ -228,6 +228,9 @@ extern int k_pres_commit_and_close(struct pres_file_t* pf);
 extern int k_pres_open
 (struct pres_file_t* pf, const char* name, const void* key);
 
+extern int k_pres_open_pass
+(struct pres_file_t* pf, const char* name, const char* pass);
+
 /* closes open container */
 extern int k_pres_close(struct pres_file_t* pf);
 
