@@ -20,6 +20,8 @@
 #include <ftw.h>
 #include <termios.h>
 #define MKDIR_MODE ,0700
+
+extern int getln(char** lineptr, size_t* n, FILE* stream);
 #else
 #include "utils/ntwrap.h"
 #define MKDIR_MODE
@@ -111,7 +113,7 @@ char* get_pass(const char* prompt)
 	printf(prompt);
 	fflush(stdout);
 	fflush(stdin);
-	nread = getline(&pass, &n, stdin);
+	nread = getln(&pass, &n, stdin);
 
 	tcsetattr(fileno(stdin), TCSAFLUSH, &old);
 	printf("\n");

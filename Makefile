@@ -133,6 +133,7 @@ SRC		+= ./src/utils/ntwrap.c
 endif
 
 SRCBIN		+= ./src/ktool/main.c
+SRCBIN		+= ./src/ktool/getln.c
 
 ################################################################################
 
