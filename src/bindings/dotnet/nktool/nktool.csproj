@@ -51,6 +51,7 @@
     <Compile Include="StreamcipherTestVector.cs" />
     <Compile Include="StringConvert.cs" />
     <Compile Include="PerfTest.cs" />
+    <Compile Include="ThreefishTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\nlibk.csproj">

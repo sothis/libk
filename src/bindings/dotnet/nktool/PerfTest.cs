@@ -105,6 +105,35 @@ namespace nktool
 		}
 	}
 
+	public class TestBlockStreamcipherThroughput
+	{
+		public BlockcipherKind cipherkind;
+		public BlockcipherStreamModeKind streammode;
+		public int keybits;
+		public int megabytes;
+
+		public double Run()
+		{
+			PerfWatch t = new PerfWatch();
+			t.Start();
+			t.Stop();
+			using (Streamcipher sc = new Streamcipher(cipherkind, streammode)) {
+				byte[] key = new byte[(keybits + 7) / 8];
+				byte[] input = new byte[megabytes * 1048576];
+				byte[] output = new byte[megabytes * 1048576];
+
+				sc.SetKey(key, keybits);
+				sc.Update(input, output);
+				GC.Collect();
+				t.Start();
+				sc.Update(input, output);
+				t.Stop();
+			}
+			GC.Collect();
+			return megabytes / t.seconds();
+		}
+	}
+
 	public class TestHashThroughput
 	{
 		public HashKind Hashsum;

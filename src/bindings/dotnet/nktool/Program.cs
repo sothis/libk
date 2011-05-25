@@ -15,67 +15,45 @@ namespace nktool
 {
 	class Program
 	{
-		static double BenchTf256CtrEnc()
-		{
-			return new TestBlockcipherThroughput {
-				cipherkind = BlockcipherKind.Threefish256,
-				ciphermode = BlockcipherModeKind.Counter,
-				keybits = 256,
-				keytype = KeyKind.Encrypt,
-				megabytes = 128
-			}.Run();
-		}
-
-		static double BenchTf512CtrEnc()
-		{
-			return new TestBlockcipherThroughput {
-				cipherkind = BlockcipherKind.Threefish512,
-				ciphermode = BlockcipherModeKind.Counter,
-				keybits = 512,
-				keytype = KeyKind.Encrypt,
-				megabytes = 128
-			}.Run();
-		}
-
-		static double BenchTf1024CtrEnc()
-		{
-			return new TestBlockcipherThroughput {
-				cipherkind = BlockcipherKind.Threefish1024,
-				ciphermode = BlockcipherModeKind.Counter,
-				keybits = 1024,
-				keytype = KeyKind.Encrypt,
-				megabytes = 128
-			}.Run();
-		}
-
 		static void worker()
 		{
 			try {
-				Console.WriteLine("AES ECB        : {0}", AesTest.TestECB() ? "passed" : "failed");
-				Console.WriteLine("AES CBC        : {0}", AesTest.TestCBC() ? "passed" : "failed");
-				Console.WriteLine("AES CFB        : {0}", AesTest.TestCFB() ? "passed" : "failed");
-				Console.WriteLine("AES OFB        : {0}", AesTest.TestOFB() ? "passed" : "failed");
-				Console.WriteLine("AES CTR        : {0}", AesTest.TestCTR() ? "passed" : "failed");
-				Console.WriteLine("AES CTR Stream : {0}", AesTest.TestCTRStream() ? "passed" : "failed");
-				Console.WriteLine("ARC4           : {0}", Arc4Test.Test() ? "passed" : "failed");
-				Console.WriteLine("SKEIN256       : {0}", SkeinTest.Test256() ? "passed" : "failed");
-				Console.WriteLine("SKEIN512       : {0}", SkeinTest.Test512() ? "passed" : "failed");
-				Console.WriteLine("SKEIN1024      : {0}", SkeinTest.Test1024() ? "passed" : "failed");
-				Console.WriteLine("SHA1           : {0}", Sha1Test.Test() ? "passed" : "failed");
-#if false
-				Console.WriteLine("");
-				Console.WriteLine("AES128 CTR    : {0:f2} MiB/s", AesTest.Bench128CtrEnc());
-				Console.WriteLine("AES192 CTR    : {0:f2} MiB/s", AesTest.Bench192CtrEnc());
-				Console.WriteLine("TF256 CTR     : {0:f2} MiB/s", BenchTf256CtrEnc());
-				Console.WriteLine("TF512 CTR     : {0:f2} MiB/s", BenchTf512CtrEnc());
-				Console.WriteLine("TF1024 CTR    : {0:f2} MiB/s", BenchTf1024CtrEnc());
-				Console.WriteLine("");
-				Console.WriteLine("SKEIN256      : {0:f2} MiB/s", SkeinTest.Bench256());
-				Console.WriteLine("SKEIN512      : {0:f2} MiB/s", SkeinTest.Bench512());
-				Console.WriteLine("SKEIN1024     : {0:f2} MiB/s", SkeinTest.Bench1024());
-				Console.WriteLine("SHA1          : {0:f2} MiB/s", Sha1Test.Bench());
-				Console.WriteLine("ARC4          : {0:f2} MiB/s", Arc4Test.Bench());
-				Console.WriteLine("MT19937-32    : {0:f2} MiB/s", Mt19937_32Test.Bench());
+				Console.WriteLine("Algorithm Unittests");
+				Console.WriteLine("\tAES ECB        : {0}", AesTest.TestECB() ? "passed" : "failed");
+				Console.WriteLine("\tAES CBC        : {0}", AesTest.TestCBC() ? "passed" : "failed");
+				Console.WriteLine("\tAES CFB        : {0}", AesTest.TestCFB() ? "passed" : "failed");
+				Console.WriteLine("\tAES OFB        : {0}", AesTest.TestOFB() ? "passed" : "failed");
+				Console.WriteLine("\tAES CTR Block  : {0}", AesTest.TestCTR() ? "passed" : "failed");
+				Console.WriteLine("\tAES CTR Stream : {0}", AesTest.TestCTRStream() ? "passed" : "failed");
+				Console.WriteLine("\tARC4           : {0}", Arc4Test.Test() ? "passed" : "failed");
+				Console.WriteLine("\tSKEIN256       : {0}", SkeinTest.Test256() ? "passed" : "failed");
+				Console.WriteLine("\tSKEIN512       : {0}", SkeinTest.Test512() ? "passed" : "failed");
+				Console.WriteLine("\tSKEIN1024      : {0}", SkeinTest.Test1024() ? "passed" : "failed");
+				Console.WriteLine("\tSHA1           : {0}", Sha1Test.Test() ? "passed" : "failed");
+#if true
+				Console.WriteLine("Blockcipher Performance Tests");
+				Console.WriteLine("\tAES128 ECB    : {0:f2} MiB/s", AesTest.Bench128EcbEnc());
+				Console.WriteLine("\tAES192 ECB    : {0:f2} MiB/s", AesTest.Bench192EcbEnc());
+				Console.WriteLine("\tTF256  ECB    : {0:f2} MiB/s", ThreefishTest.Bench256EcbEnc());
+				Console.WriteLine("\tTF512  ECB    : {0:f2} MiB/s", ThreefishTest.Bench512EcbEnc());
+				Console.WriteLine("\tTF1024 ECB    : {0:f2} MiB/s", ThreefishTest.Bench1024EcbEnc());
+
+				Console.WriteLine("Streamcipher Performance Tests");
+				Console.WriteLine("\tARC4          : {0:f2} MiB/s", Arc4Test.Bench());
+				Console.WriteLine("\tAES128 CTR    : {0:f2} MiB/s", AesTest.Bench128Ctr());
+				Console.WriteLine("\tAES192 CTR    : {0:f2} MiB/s", AesTest.Bench192Ctr());
+				Console.WriteLine("\tTF256  CTR    : {0:f2} MiB/s", ThreefishTest.BenchTf256Ctr());
+				Console.WriteLine("\tTF512  CTR    : {0:f2} MiB/s", ThreefishTest.BenchTf512Ctr());
+				Console.WriteLine("\tTF1024 CTR    : {0:f2} MiB/s", ThreefishTest.BenchTf1024Ctr());
+
+				Console.WriteLine("Hashsum Performance Tests");
+				Console.WriteLine("\tSKEIN256      : {0:f2} MiB/s", SkeinTest.Bench256());
+				Console.WriteLine("\tSKEIN512      : {0:f2} MiB/s", SkeinTest.Bench512());
+				Console.WriteLine("\tSKEIN1024     : {0:f2} MiB/s", SkeinTest.Bench1024());
+				Console.WriteLine("\tSHA1          : {0:f2} MiB/s", Sha1Test.Bench());
+
+				Console.WriteLine("Pseudorandomnumber Generator Performance Tests");
+				Console.WriteLine("\tMT19937-32    : {0:f2} MiB/s", Mt19937_32Test.Bench());
 #endif
 			} catch (Exception e) {
 				Console.WriteLine("An exception occured : {0}", e.Message);

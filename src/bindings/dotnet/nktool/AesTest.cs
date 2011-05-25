@@ -192,22 +192,42 @@ namespace nktool
 			return ctrStreamVector192.Test();
 		}
 
-		public static double Bench128CtrEnc()
+		public static double Bench128Ctr()
+		{
+			return new TestBlockStreamcipherThroughput {
+				cipherkind = BlockcipherKind.AES,
+				streammode = BlockcipherStreamModeKind.Counter,
+				keybits = 128,
+				megabytes = 128
+			}.Run();
+		}
+
+		public static double Bench192Ctr()
+		{
+			return new TestBlockStreamcipherThroughput {
+				cipherkind = BlockcipherKind.AES,
+				streammode = BlockcipherStreamModeKind.Counter,
+				keybits = 192,
+				megabytes = 128
+			}.Run();
+		}
+
+		public static double Bench128EcbEnc()
 		{
 			return new TestBlockcipherThroughput {
 				cipherkind = BlockcipherKind.AES,
-				ciphermode = BlockcipherModeKind.Counter,
+				ciphermode = BlockcipherModeKind.ElectronicCodeBook,
 				keybits = 128,
 				keytype = KeyKind.Encrypt,
 				megabytes = 128
 			}.Run();
 		}
 
-		public static double Bench192CtrEnc()
+		public static double Bench192EcbEnc()
 		{
 			return new TestBlockcipherThroughput {
 				cipherkind = BlockcipherKind.AES,
-				ciphermode = BlockcipherModeKind.Counter,
+				ciphermode = BlockcipherModeKind.ElectronicCodeBook,
 				keybits = 192,
 				keytype = KeyKind.Encrypt,
 				megabytes = 128

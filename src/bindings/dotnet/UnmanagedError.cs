@@ -37,7 +37,7 @@ namespace nlibk
 			if (level == ErrorLevel.K_LWARN) {
 				// TODO: use a user supplied callback here or provide some other mechanism to override this
 				// NOTE: if using a callback here, the user _must not_ throw exceptions in that callback
-				Console.WriteLine("nlibk warning: {0}", errormessage);
+				/* Console.WriteLine("nlibk warning: {0}", errormessage); */
 				return;
 			}
 			LastError = error;
