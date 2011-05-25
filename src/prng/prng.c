@@ -55,7 +55,7 @@ __export_function struct k_prng_t* k_prng_init
 		err = K_ENOMEM;
 		goto k_prng_init_err;
 	}
-#ifndef __WINNT_
+#ifndef __WINNT__
 	if (c->prng->setfds) {
 		c->fd_urandom = open("/dev/urandom", O_RDONLY);
 		if (c->fd_urandom == -1) {

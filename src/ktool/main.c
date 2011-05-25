@@ -24,6 +24,7 @@
 extern int getln(char** lineptr, size_t* n, FILE* stream);
 #else
 #include "utils/ntwrap.h"
+#include <conio.h>
 #define MKDIR_MODE
 #endif
 
@@ -129,29 +130,36 @@ char* get_pass(const char* prompt)
 	return pass;
 }
 #else
-char password[100];
-void get_pass(void)
+char* get_pass(const char* prompt)
 {
-	int ab=0;
+	/* TODO: this is rubbish. implement something better */
+	char* pass = calloc(1, 4097);
+	int i = 0;
 	char a;
-	while(1) {
+
+	if (!pass)
+		return 0;
+
+	printf("%s", prompt);
+	fflush(stdout);
+	while(i <= 4096) {
 		fflush(stdin);
 		a = getch();
-		if (a>47 && a<123) {
-		password[ab]=a;
-		ab++;
-		}
-		else if(a==8)
-		{
-			if(ab>0)
-			ab--;
-		}
-		else if(a==13)
-		{
-			password[ab]='\0';
+		if (a > 47 && a < 123) {
+			pass[i]=a;
+			i++;
+		} else if(a == 8) {
+			if(i > 0)
+				i--;
+		} else if(a == 13) {
+			pass[i] = 0;
 			break;
 		}
 	}
+	printf("\n");
+	fflush(stdout);
+	fflush(stdin);
+	return pass;
 }
 #endif
 
