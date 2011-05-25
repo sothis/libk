@@ -16,7 +16,6 @@
 __export_function void* _k_key_derive_simple1024
 (	const char*	pass,
 	void*		salt,
-	uint64_t	saltsize,
 	uint64_t	iter)
 {
 	k_hash_t* h = k_hash_init(HASHSUM_SKEIN_1024, 1024);
@@ -25,7 +24,7 @@ __export_function void* _k_key_derive_simple1024
 	size_t sp = strlen(pass);
 	size_t digestbytes = (k_hash_digest_size(h) + 7) / 8;
 
-	void* inp = malloc(sp+saltsize);
+	void* inp = malloc(sp+digestbytes);
 	if (!inp) {
 		k_hash_finish(h);
 		return 0;
@@ -38,9 +37,9 @@ __export_function void* _k_key_derive_simple1024
 	}
 
 	memcpy(inp, pass, sp);
-	memcpy(inp+sp, salt, saltsize);
+	memcpy(inp+sp, salt, digestbytes);
 
-	k_hash_update(h, inp, sp+saltsize);
+	k_hash_update(h, inp, sp+digestbytes);
 	k_hash_final(h, outp);
 	free(inp);
 
