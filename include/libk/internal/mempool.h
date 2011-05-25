@@ -16,6 +16,7 @@
 
 struct mempool_t {
 	void*		base;
+	int		alloced;
 	size_t		data_size;
 	size_t		page_size;
 	size_t		pages;

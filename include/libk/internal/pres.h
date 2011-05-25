@@ -127,7 +127,6 @@ struct mmap_t {
 struct pres_file_t {
 	int				fd;
 	int				is_corrupt;
-	k_hash_t*			hash;
 	k_sc_t*				scipher;
 	size_t				nonce_size;
 	size_t				cur_filesize;
@@ -171,7 +170,7 @@ struct pres_options_t {
 	/* optional, depends on the selected cipher */
 	uint32_t tweaksize;
 
-	/* if a cipher is set, use key or pass. if both are given
+	/* optional, if a cipher is set, use key or pass. if both are given
 	 * the key will be used */
 	void* key;
 	const char* pass;

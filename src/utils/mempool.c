@@ -51,7 +51,10 @@ int pool_alloc(struct mempool_t* p, size_t page_size)
 {
 	memset(p, 0, sizeof(struct mempool_t));
 	p->page_size = page_size ? page_size : 4096;
-	return pthread_mutex_init(&p->lock, 0);
+	int res = pthread_mutex_init(&p->lock, 0);
+	if (!res)
+		p->alloced = 1;
+	return res;
 }
 
 int pool_free(struct mempool_t* p)
