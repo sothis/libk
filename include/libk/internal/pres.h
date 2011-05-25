@@ -61,6 +61,8 @@ struct pres_file_header_t {
 	uint64_t	detached_header_start;
 	uint8_t		detached_header_iv[PRES_MAX_IV_LENGTH];
 
+	uint8_t		kdf_salt[PRES_MAX_IV_LENGTH];
+
 	/* if pres_signed is not set, the content is irrelevant, but will be
 	 * used in digest calculations */
 //	uint8_t		signature[PRES_MAX_SIG_LENGTH];
@@ -169,8 +171,10 @@ struct pres_options_t {
 	/* optional, depends on the selected cipher */
 	uint32_t tweaksize;
 
-	/* mandatory if a cipher is set */
+	/* if a cipher is set, use key or pass. if both are given
+	 * the key will be used */
 	void* key;
+	const char* pass;
 };
 
 enum pres_structure_sizes_e {
