@@ -905,6 +905,8 @@ failed:
 __export_function int k_pres_open_pass
 (struct pres_file_t* pf, const char* name, const char* pass)
 {
+	void* key = 0;
+	int res = -1;
 	memset(pf, 0, sizeof(struct pres_file_t));
 
 	pf->fd = _open_pres(name);
@@ -916,9 +918,10 @@ __export_function int k_pres_open_pass
 	}
 	close(pf->fd);
 
-	void* key = _k_key_derive_simple1024(pass, pf->hdr.kdf_salt, 100000);
+	if (pf->hdr.cipher)
+		key = _k_key_derive_simple1024(pass, pf->hdr.kdf_salt, 100000);
 
-	int res = k_pres_open(pf, name, key);
+	res = k_pres_open(pf, name, key);
 	free(key);
 	return res;
 }
