@@ -110,7 +110,7 @@ char* get_pass(const char* prompt)
 	if (tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0)
 		return 0;
 
-	printf(prompt);
+	printf("%s", prompt);
 	fflush(stdout);
 	fflush(stdin);
 	nread = getln(&pass, &n, stdin);
