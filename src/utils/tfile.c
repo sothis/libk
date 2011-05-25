@@ -99,7 +99,7 @@ static int __init(void)
 	return 0;
 }
 
-__export_function int tcreat(const char* name, mode_t mode)
+__export_function int k_tcreat(const char* name, mode_t mode)
 {
 	int res = -1;
 	mode_t old_umask;
@@ -165,7 +165,7 @@ out:
 	return res;
 }
 
-__export_function int tcommit_and_close(int fd)
+__export_function int k_tcommit_and_close(int fd)
 {
 	if (!tfile_init)
 		return 0;
@@ -181,7 +181,7 @@ __export_function int tcommit_and_close(int fd)
 	return 0;
 }
 
-__export_function void trollback_and_close(int fd)
+__export_function void k_trollback_and_close(int fd)
 {
 	if (!tfile_init)
 		return;

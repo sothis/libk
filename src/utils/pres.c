@@ -68,9 +68,9 @@ __export_function int k_pres_create
 		return -1;
 
 #ifdef NDEBUG
-	pf->fd = tcreat(opt->name, 0400);
+	pf->fd = k_tcreat(opt->name, 0400);
 #else
-	pf->fd = tcreat(opt->name, 0600);
+	pf->fd = k_tcreat(opt->name, 0600);
 #endif
 	if (pf->fd == -1) {
 		k_hash_finish(pf->hash);
@@ -96,7 +96,7 @@ __export_function int k_pres_create
 
 	pf->rtbl = calloc(1, sz_res_tbl);
 	if (!pf->rtbl) {
-		trollback_and_close(pf->fd);
+		k_trollback_and_close(pf->fd);
 		k_hash_finish(pf->hash);
 		return -1;
 	}
@@ -111,7 +111,7 @@ __export_function int k_pres_create
 	/* this creates a hole for the file header, i.e. a sparse file on
 	 * filesystems which supports it */
 	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1) {
-		trollback_and_close(pf->fd);
+		k_trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);
 		return -1;
@@ -125,20 +125,20 @@ __export_function int k_pres_create
 	}
 
 	if (pf->hdr.cipher && !opt->key) {
-		trollback_and_close(pf->fd);
+		k_trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);
 		return -1;
 	}
 	if (pf->hdr.cipher && !pf->scipher) {
-		trollback_and_close(pf->fd);
+		k_trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);
 		return -1;
 	}
 	if (pf->hdr.cipher &&
 	k_sc_set_key(pf->scipher, opt->key, opt->keysize)) {
-		trollback_and_close(pf->fd);
+		k_trollback_and_close(pf->fd);
 		free(pf->rtbl);
 		k_hash_finish(pf->hash);
 		return -1;
@@ -410,11 +410,11 @@ __export_function int k_pres_commit_and_close(struct pres_file_t* pf)
 	if (write(pf->fd, pf->rtbl, s) != s)
 		goto err_out;
 
-	res = tcommit_and_close(pf->fd);
+	res = k_tcommit_and_close(pf->fd);
 
 	goto out;
 err_out:
-	trollback_and_close(pf->fd);
+	k_trollback_and_close(pf->fd);
 	res = -1;
 out:
 	k_hash_finish(pf->hash);

@@ -11,11 +11,19 @@
 #include <stdio.h>
 #include "utils/sections.h"
 
-const char* const __libk_version_string = VERSION;
-const char* const __libk_builddate_string = __DATE__;
-const char* const __libk_buildtime_string = __TIME__;
+static const char* const __libk_version_string = VERSION;
+static const char* const __libk_builddate_string = __DATE__;
+static const char* const __libk_buildtime_string = __TIME__;
 
-__export_function void k_print_version_info(void)
+__export_function void k_version_print(void)
 {
-	fprintf(stderr, "libk %s, %s %s\n", VERSION, __DATE__, __TIME__);
+	fprintf(stderr, "libk %s, %s %s\n",
+		__libk_version_string,
+		__libk_builddate_string,
+		__libk_buildtime_string);
+}
+
+__export_function const char* k_version_get(void)
+{
+	return __libk_version_string;
 }

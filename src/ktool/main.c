@@ -187,7 +187,7 @@ next:
 		struct pres_res_t r;
 		k_pres_res_by_id(&_cur_pres, &r, i);
 
-		int fd = tcreat(name, 0400);
+		int fd = k_tcreat(name, 0400);
 		if (fd == -1) {
 			perror("tcreat");
 			exit(1);
@@ -210,7 +210,7 @@ next:
 				if (nwritten < 0) {
 					perror("write");
 					k_pres_res_unmap(&r);
-					trollback_and_close(fd);
+					k_trollback_and_close(fd);
 					goto next;
 				}
 				total += nwritten;
@@ -227,7 +227,7 @@ next:
 				if (nwritten < 0) {
 					perror("write");
 					k_pres_res_unmap(&r);
-					trollback_and_close(fd);
+					k_trollback_and_close(fd);
 					goto next;
 				}
 				total += nwritten;
@@ -235,7 +235,7 @@ next:
 			k_pres_res_unmap(&r);
 		}
 
-		tcommit_and_close(fd);
+		k_tcommit_and_close(fd);
 	}
 
 	if (k_pres_close(&_cur_pres)) {
@@ -276,7 +276,7 @@ int main(int argc, char* argv[], char* envp[])
 		return failed;
 	}
 	if (!strcmp(argv[1], "--version")) {
-		k_print_version_info();
+		k_version_print();
 		return 0;
 	}
 	return -1;

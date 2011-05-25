@@ -98,6 +98,7 @@ SRC		+= ./src/blockcipher/modes/cbc.c
 SRC		+= ./src/blockcipher/modes/cfb.c
 SRC		+= ./src/blockcipher/modes/ofb.c
 SRC		+= ./src/blockcipher/modes/ctr.c
+SRC		+= ./src/blockcipher/modes/tests.c
 SRC		+= ./src/blockcipher/ciphers/threefish/threefish256.c
 SRC		+= ./src/blockcipher/ciphers/threefish/threefish512.c
 SRC		+= ./src/blockcipher/ciphers/threefish/threefish1024.c
@@ -117,19 +118,20 @@ SRC		+= ./src/hash/skein/skein512.c
 SRC		+= ./src/hash/skein/skein1024.c
 SRC		+= ./src/hash/sha1/sha1.c
 
-SRC		+= ./src/tests/blockciphermodes.c
-SRC		+= ./src/pres/pres.c
+
+SRC		+= ./src/utils/pres.c
+SRC		+= ./src/utils/tfile.c
 SRC		+= ./src/utils/mem.c
 SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
 SRC		+= ./src/utils/unittest.c
 SRC		+= ./src/utils/mempool.c
-SRC		+= ./src/utils/tfile.c
+
 ifdef PLAT_WINNT
 SRC		+= ./src/utils/ntwrap.c
 endif
 
-SRCBIN		+= ./src/cmdline/main.c
+SRCBIN		+= ./src/ktool/main.c
 
 ################################################################################
 

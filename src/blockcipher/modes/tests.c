@@ -1,5 +1,5 @@
 /*
- * libk - blockciphermodes.c
+ * libk - tests.c
  *
  * 2011, Janos Laube <janos.dev@gmail.com>
  *

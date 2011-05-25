@@ -34,7 +34,11 @@ extern void k_set_error_handler
 extern int k_run_unittests
 (int verbose);
 
-extern void k_print_version_info
+extern void k_version_print
 (void);
+
+extern const char* k_version_get
+(void);
+
 
 #endif /* _LIBK_H */
