@@ -3,7 +3,7 @@
 DEFAULT_VERSION=v0.2.2
 
 if test -d .git -o -f .git &&
-	VN=$(git describe --tags --abbrev=4 --match 'v*' --dirty 2>/dev/null)
+	VN=$(git describe --tags --abbrev=4 --dirty 2>/dev/null)
 then
 	VN=$(echo "$VN" | sed 's/-/+/;s/\(.*\)-g/\1-/');
 	VN=$(echo "$VN" | sed 's/-/./g');
