@@ -16,8 +16,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-extern char* absfilename(const char* name);
-
 #ifndef __WINNT__
 #include <ftw.h>
 #include <termios.h>
@@ -361,7 +359,7 @@ int main(int argc, char* argv[], char* envp[])
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
 		#ifdef __WINNT__
 			printf("not yet implemented.\n");
-			return -1;
+			//return -1;
 		#endif
 		size_t s = strlen(argv[2]);
 		/* TODO: introduce failsafe path resolution */
@@ -425,13 +423,6 @@ int main(int argc, char* argv[], char* envp[])
 	}
 	if (!strcmp(argv[1], "help")) {
 		print_help();
-		return 0;
-	}
-	if (!strcmp(argv[1], "abs") && (argc > 2)) {
-		char* a = absfilename(argv[2]);
-		printf("absname: '%s'\n", a);
-		if (a)
-			free(a);
 		return 0;
 	}
 	print_help();

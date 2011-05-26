@@ -134,7 +134,6 @@ endif
 
 SRCBIN		+= ./src/ktool/main.c
 SRCBIN		+= ./src/ktool/getln.c
-SRCBIN		+= ./src/ktool/absname.c
 
 ################################################################################
 

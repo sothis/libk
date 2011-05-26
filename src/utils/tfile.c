@@ -8,15 +8,6 @@
  * worldwide. This software is distributed without any warranty.
 */
 
-/* NOTE: in order for this to work properly, the process must not change
- * it's current working directory via chdir() and friends while still having
- * tfiles open */
-
-/*
- * TODO: implement a real_name() which doesn't rely on PATH_MAX in order to
- * overcome the above problem and save absolute filenames for the tmpfile and
- * the resulting file */
-
 #include <libk/libk.h>
 #include "utils/sections.h"
 
@@ -35,13 +26,14 @@
 
 #if defined(__DARWIN__) || defined(__WINNT__)
 #define O_NOATIME		0
+#include <libgen.h>
 #endif
 
 static volatile sig_atomic_t tfile_init = 0;
 static struct mempool_t mappool;
 static const char* template = ".tfile_XXXXXX";
 
-/* only remove '.', '..' and multiple '/' compontents, keep symlinks */
+/* just prepend the cwd */
 static char* absfilename(const char* name)
 {
 	size_t wds, ns;
@@ -67,47 +59,19 @@ static char* absfilename(const char* name)
 	if (name[0] == '/') {
 		memcpy(p, name, ns);
 		last = p+ns-1;
-	} else {
+	}
+#ifdef __WINNT__
+	else if((strlen(name) > 2) && name[1] == ':' && name[2] == '\\') {
+		memcpy(p, name, ns);
+		last = p+ns-1;
+	}
+#endif
+	else {
 		memcpy(p, cwd, wds);
 		p[wds] = '/';
 		memcpy(p+wds+1, name, ns);
 		last = p+ns+wds;
 	}
-
-	char* f = p;
-	char* t = p;
-	while(*f) {
-		char* ls;
-		char n = *f++; *t++ = n;
-
-		if ((n == '/') && (t > p+1)) {
-			char* e = &t[-2];
-			switch (*e) {
-			case '/':
-				t--;
-				break;
-			case '.':
-				ls = &e[-1];
-				if (t > p+2) {
-					if (*ls == '.') {
-						if ((t > p+4) &&
-						(*--ls == '/')) {
-							while ((ls > p) &&
-							!(*--ls == '/'));
-							t = ls+1;
-						}
-					} else if (*ls == '/')
-						t = e;
-				}
-				break;
-			default:
-				break;
-			}
-		}
-	}
-	if ((t[-1] == '/') && (t > p+1))
-		t--;
-	t[0] = 0;
 
 	free(cwd);
 	return p;
@@ -218,15 +182,18 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 		goto err;
 	}
 
-	tf.filename = calloc(namelen+1, sizeof(char));
+	tf.filename = absfilename(name);
 	if (!tf.filename)
 		goto err;
-	memcpy(tf.filename, name, namelen);
 
-	tf.tmpfilename = calloc(strlen(template)+1, sizeof(char));
+	tf.tmpfilename = calloc(strlen(tf.filename)+strlen(template)+2, 1);
 	if (!tf.tmpfilename)
 		goto err;
-	sprintf(tf.tmpfilename, "%s", template);
+
+	strcpy(tf.tmpfilename, tf.filename);
+	tf.tmpfilename = dirname(tf.tmpfilename);
+
+	sprintf(tf.tmpfilename, "%s/%s", tf.tmpfilename, template);
 
 	if ((tf.fd = mkstemp(tf.tmpfilename)) == -1)
 		goto err;
