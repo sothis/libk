@@ -184,15 +184,32 @@ static int import_directory
 		return -1;
 	}
 	/* clear/free password here */
+
+	char* cwd = getcwd(0, 0);
+	if (!cwd) {
+		perror("getcwd");
+		return -1;
+	}
+	if (chdir(directory)) {
+		free(cwd);
+		perror("chdir");
+		return -1;
+	}
 #ifndef __WINNT__
 	/* stay within the same filesystem, do not follow symlinks */
-	if (nftw(directory, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS))
+	if (nftw(".", ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS))
 		return -1;
 #endif
 	if (k_pres_close(&_cur_pres)) {
 		perror("pres_close");
 		return -1;
 	}
+	if (chdir(cwd)) {
+		free(cwd);
+		perror("chdir");
+		return -1;
+	}
+	free(cwd);
 	return 0;
 }
 

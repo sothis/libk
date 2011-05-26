@@ -26,8 +26,9 @@
 
 #if defined(__DARWIN__) || defined(__WINNT__)
 #define O_NOATIME		0
-#include <libgen.h>
 #endif
+
+#include <libgen.h>
 
 static volatile sig_atomic_t tfile_init = 0;
 static struct mempool_t mappool;
