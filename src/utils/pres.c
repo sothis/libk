@@ -119,7 +119,9 @@ __export_function int k_pres_add_file
 	}
 	size_t namelen = strlen(name)+1;
 	if (namelen == 1) {
-		/* above algorithm might be broken when this happens */
+		/* above algorithm might be broken when this happens,
+		 * might happen when a file without './' is about to
+		 * be added */
 		fprintf(stderr, "fix me: k_pres_add_file\n");
 		exit(1);
 	}
