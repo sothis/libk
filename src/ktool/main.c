@@ -96,15 +96,16 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 	if (!S_ISREG(sb->st_mode))
 		return FTW_CONTINUE;
 
+	printf("importing: %s\n", path);
 	if ((r = k_pres_add_file(&_cur_pres, path, ftw->base)) != 0) {
 		if (r == 1)
-			printf("skipped: %s\n", path);
+			printf("\tskipped\n");
 		if (r == -1) {
 			perror("pres_add_file");
 			return FTW_STOP;
 		}
 	} else
-		printf("imported: %s\n", path);
+		printf("\tsuccess\n");
 
 	return FTW_CONTINUE;
 }
