@@ -97,6 +97,7 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 char* get_pass(const char* prompt)
 {
 	size_t n = 1024;
+	/* TODO: when moving this into libk, use locked memory */
 	char* pass = calloc(n+1, 1);
 	struct termios old, new;
 	int nread;
@@ -133,6 +134,7 @@ char* get_pass(const char* prompt)
 char* get_pass(const char* prompt)
 {
 	/* TODO: this is rubbish. implement something better */
+	/* TODO: when moving this into libk, use locked memory */
 	char* pass = calloc(1, 4097);
 	int i = 0;
 	char a;
@@ -183,7 +185,6 @@ static int import_directory
 		perror("pres_create");
 		return -1;
 	}
-	/* clear/free password here */
 
 	char* cwd = getcwd(0, 0);
 	if (!cwd) {
@@ -256,7 +257,6 @@ static int export_all(const char* filename, const char* dir)
 	}
 
 	if (r) {
-		/* retrieve password here */
 		pass = get_pass("enter password  : ");
 		if (!pass) {
 			perror("get_pass");
