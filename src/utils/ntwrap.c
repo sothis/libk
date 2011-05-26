@@ -112,7 +112,7 @@ static int32_t win32_get_ucs2_length(const char* utf8_str)
 {
 	int32_t res;
 	res = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_str, -1,
-		0, 0)))
+		0, 0);
 	return res;
 }
 
