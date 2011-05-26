@@ -115,9 +115,6 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 	/* TODO: rename is broken on windows. it doesn't allow to replace
 	 * exising files atomically. see google for existing implementations
 	 * and replace rename() for windows targets with a suitable one. */
-	/* TODO 2: maybe also replace it on linux/mac os, since rename does not
-	 * allow renames across different mount points, even if they're
-	 * pointing to the same filesystem */
 	if (rename(tf->tmpfilename, tf->filename))
 		goto err;
 
@@ -192,9 +189,9 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 		goto err;
 
 	strcpy(tf.tmpfilename, tf.filename);
-	tf.tmpfilename = dirname(tf.tmpfilename);
+	char* dir = dirname(tf.tmpfilename);
 
-	sprintf(tf.tmpfilename, "%s/%s", tf.tmpfilename, template);
+	sprintf(tf.tmpfilename, "%s/%s", dir, template);
 
 	if ((tf.fd = mkstemp(tf.tmpfilename)) == -1)
 		goto err;
