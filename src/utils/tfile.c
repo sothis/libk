@@ -12,6 +12,11 @@
  * it's current working directory via chdir() and friends while still having
  * tfiles open */
 
+/*
+ * TODO: implement a real_name() which doesn't rely on PATH_MAX in order to
+ * overcome the above problem and save absolute filenames for the tmpfile and
+ * the resulting file */
+
 #include <libk/libk.h>
 #include "utils/sections.h"
 
@@ -65,6 +70,9 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 	/* TODO: rename is broken on windows. it doesn't allow to replace
 	 * exising files atomically. see google for existing implementations
 	 * and replace rename() for windows targets with a suitable one. */
+	/* TODO 2: maybe also replace it on linux/mac os, since rename does not
+	 * allow renames across different mount points, even if they're
+	 * pointing to the same filesystem */
 	if (rename(tf->tmpfilename, tf->filename))
 		goto err;
 
