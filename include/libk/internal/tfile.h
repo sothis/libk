@@ -17,4 +17,6 @@ extern int k_tcreat(const char* name, mode_t mode);
 extern int k_tcommit_and_close(int fd);
 extern void k_trollback_and_close(int fd);
 
+extern int k_tcreate_dirs(const char* path);
+
 #endif /* _TFILE_H */

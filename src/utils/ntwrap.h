@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <sys/types.h>
+#include <direct.h>
 
 #define MAP_FAILED	((void*)~0ul)
 #define PROT_READ       0x01
@@ -26,5 +27,7 @@ int fchmod(int fildes, mode_t mode);
 int fsync(int fd);
 void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off);
 int munmap(void* start, size_t length);
+
+wchar_t* utf8_to_ucs2(const char* utf8_str);
 
 #endif /* _NTWRAP_H */

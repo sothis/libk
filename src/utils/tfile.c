@@ -91,7 +91,15 @@ struct tfile_t {
 
 static void trollback_one(struct tfile_t* tf, size_t off)
 {
+	#ifdef __WINNT__
+	wchar_t* wtf = utf8_to_ucs2(tf->tmpfilename);
+	if (wtf) {
+		_wunlink(wtf);
+		free(wtf);
+	}
+	#else
 	unlink(tf->tmpfilename);
+	#endif
 	close(tf->fd);
 	free(tf->filename);
 	free(tf->tmpfilename);
@@ -100,6 +108,10 @@ static void trollback_one(struct tfile_t* tf, size_t off)
 
 static int tcommit_one(struct tfile_t* tf, size_t off)
 {
+	#ifdef __WINNT__
+	wchar_t* wtf = 0;
+	wchar_t* wf = 0;
+	#endif
 	int old_errno;
 
 	if (fchmod(tf->fd, tf->mode))
@@ -111,14 +123,30 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 	/* TODO: rename is broken on windows. it doesn't allow to replace
 	 * exising files atomically. see google for existing implementations
 	 * and replace rename() for windows targets with a suitable one. */
+#ifdef __WINNT__
+	wtf = utf8_to_ucs2(tf->tmpfilename);
+	wf = utf8_to_ucs2(tf->filename);
+	if (!wtf || !wf)
+		goto err;
+	if (_wrename(wtf, wf))
+		goto err;
+	free(wtf);
+	free(wf);
+#else
 	if (rename(tf->tmpfilename, tf->filename))
 		goto err;
-
+#endif
 	free(tf->filename);
 	free(tf->tmpfilename);
 	pool_cut(&mappool, off, sizeof(struct tfile_t));
 	return 0;
 err:
+	#ifdef __WINNT__
+	if (wtf)
+		free(wtf);
+	if (wf)
+		free(wf);
+	#endif
 	old_errno = errno;
 	trollback_one(tf, off);
 	errno = old_errno;
@@ -173,7 +201,18 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 	/* check if name is valid and if we have read-write permissions in
 	 * the case the file exists. ENOENT is not fatal, since we're about
 	 * to create the file anyway. */
+	#ifdef __WINNT__
+	int fd;
+	wchar_t* wc = utf8_to_ucs2(tf.filename);
+	if (!wc)
+		fd = -1;
+	else {
+		fd = _wopen(wc, O_RDWR);
+		free(wc);
+	}
+	#else
 	int fd = open(tf.filename, O_RDWR|O_NOATIME);
+	#endif
 	if (fd == -1 && errno != ENOENT)
 		goto err;
 	if (fd != -1)
@@ -202,7 +241,15 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 	goto out;
 err:
 	if (tf.fd != -1) {
+		#ifdef __WINNT__
+		wchar_t* wtf = utf8_to_ucs2(tf.tmpfilename);
+		if (wtf) {
+			_wunlink(wtf);
+			free(wtf);
+		}
+		#else
 		unlink(tf.tmpfilename);
+		#endif
 		close(tf.fd);
 	}
 	if (tf.filename)
@@ -243,4 +290,73 @@ __export_function void k_trollback_and_close(int fd)
 			return trollback_one(&openfiles[i],
 				i*sizeof(struct tfile_t));
 	}
+}
+
+__export_function int k_tcreate_dirs(const char* path)
+{
+	#ifdef __WINNT__
+	wchar_t* wc = 0;
+	#endif
+	int res = 0;
+	char* cur = 0;
+	char* p = 0;
+
+	cur = getcwd(0, 0);
+	if (!cur)
+		goto err;
+
+	p = calloc(strlen(path)+1, sizeof(char));
+	if(!p)
+		goto err;
+	strcpy(p, path);
+
+	char* t = p;
+	if (!t)
+		goto err;
+
+	size_t n_dirs = 0;
+	while (*t) {
+		if (*t == '/')
+			n_dirs++;
+		t++;
+	}
+
+	char* c = strtok(p, "/");
+	size_t n_done = 0;
+	while (c && n_done < n_dirs) {
+		#ifndef __WINNT__
+		mkdir(c, 0700);
+		if (chdir(c))
+			goto err;
+		#else
+		wc = utf8_to_ucs2(c);
+		if (!wc)
+			goto err;
+		_wmkdir(wc);
+		if (_wchdir(wc))
+			goto err;
+		free(wc);
+		wc = 0;
+		#endif
+		c = strtok(0, "/");
+		n_done++;
+	}
+
+	if (chdir(cur))
+		goto err;
+
+	res = 0;
+	goto out;
+err:
+	res = -1;
+out:
+	#ifdef __WINNT__
+	if (wc)
+		free(wc);
+	#endif
+	if (cur)
+		free(cur);
+	if (p)
+		free(p);
+	return res;
 }

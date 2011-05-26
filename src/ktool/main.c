@@ -23,7 +23,7 @@
 
 extern int getln(char** lineptr, size_t* n, FILE* stream);
 #else
-#include "utils/ntwrap.h"
+#include <windows.h>
 #include <conio.h>
 #define MKDIR_MODE
 #endif
@@ -41,6 +41,15 @@ static void __term_handler(int sig, siginfo_t* info, void* unused)
 #define FTW_CONTINUE		0
 #define FTW_STOP		~0
 #define FTW_ACTIONRETVAL	0
+#endif
+
+#ifdef __WINNT__
+static uint32_t oldicp, oldocp;
+static void __cleanup(void)
+{
+	SetConsoleOutputCP(oldocp);
+	SetConsoleCP(oldicp);
+}
 #endif
 
 static void __init(void)
@@ -65,6 +74,12 @@ static void __init(void)
 		exit(1);
 	if (sigaction(SIGTERM, &sa, 0))
 		exit(1);
+#else
+	atexit(__cleanup);
+	oldicp = GetConsoleCP();
+	oldocp = GetConsoleOutputCP();
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
 #endif
 }
 
@@ -214,39 +229,6 @@ static int import_directory
 	return 0;
 }
 
-static void create_dirs(const char* path)
-{
-	char* cur = getcwd(0, 0);
-	char* p = calloc(strlen(path)+1, sizeof(char));
-	strcpy(p, path);
-
-	char* t = p;
-	size_t n_dirs = 0;
-	while (*t) {
-		if (*t == '/')
-			n_dirs++;
-		t++;
-	}
-
-	char* c = strtok(p, "/");
-	size_t n_done = 0;
-	while (c && n_done < n_dirs) {
-		mkdir(c MKDIR_MODE);
-		if (chdir(c)) {
-			perror("chdir");
-			exit(1);
-		}
-		c = strtok(0, "/");
-		n_done++;
-	}
-	free(p);
-	if (chdir(cur)) {
-		perror("chdir");
-		exit(1);
-	}
-	free(cur);
-}
-
 static int export_all(const char* filename, const char* dir)
 {
 	char* pass = 0;
@@ -284,7 +266,10 @@ next:
 		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
 		printf("exporting '%s'\n", name);
 
-		create_dirs(name);
+		if (k_tcreate_dirs(name)) {
+			perror("k_tcreate_dirs");
+			exit(1);
+		}
 
 		struct pres_res_t r;
 		k_pres_res_by_id(&_cur_pres, &r, i);

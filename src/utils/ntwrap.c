@@ -54,7 +54,10 @@ int mkstemp(char* template)
 			*s = randchar();
 		s++;
 	}
-	return open(template, O_RDWR|O_CREAT|O_EXCL, 0600);
+	wchar_t* wc = utf8_to_ucs2(template);
+	if (!wc)
+		return -1;
+	return _wopen(wc, O_RDWR|O_CREAT|O_EXCL, 0600);
 }
 
 int fchmod(int fd, mode_t mode)
