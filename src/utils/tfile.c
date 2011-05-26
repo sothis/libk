@@ -164,16 +164,6 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 	tf.mode = mode;
 	old_umask = umask(077);
 
-	/* check if name is valid and if we have read-write permissions in
-	 * the case the file exists. ENOENT is not fatal, since we're about
-	 * to create the file anyway. */
-	int fd = open(name, O_RDWR|O_NOATIME);
-	if (fd == -1 && errno != ENOENT)
-		goto err;
-	if (fd != -1)
-		if (close(fd))
-			goto err;
-
 	namelen = strlen(name);
 	if (!namelen) {
 		errno = EINVAL;
@@ -183,6 +173,16 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 	tf.filename = absfilename(name);
 	if (!tf.filename)
 		goto err;
+
+	/* check if name is valid and if we have read-write permissions in
+	 * the case the file exists. ENOENT is not fatal, since we're about
+	 * to create the file anyway. */
+	int fd = open(tf.filename, O_RDWR|O_NOATIME);
+	if (fd == -1 && errno != ENOENT)
+		goto err;
+	if (fd != -1)
+		if (close(fd))
+			goto err;
 
 	tf.tmpfilename = calloc(strlen(tf.filename)+strlen(template)+2, 1);
 	if (!tf.tmpfilename)
