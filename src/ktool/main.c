@@ -376,18 +376,8 @@ int main(int argc, char* argv[], char* envp[])
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
 		#ifdef __WINNT__
 			printf("not yet implemented.\n");
-			//return -1;
+			return -1;
 		#endif
-		size_t s = strlen(argv[2]);
-		/* TODO: introduce failsafe path resolution */
-		/* remove trailing slashes */
-		if (s > 0 && argv[2][s-1] == '/') {
-			char* last = argv[2] + s - 1;
-			while (*last == '/') {
-				*last = 0;
-				last--;
-			}
-		}
 		return import_directory(argv[2], argv[3], 0);
 	}
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
@@ -395,16 +385,6 @@ int main(int argc, char* argv[], char* envp[])
 			printf("not yet implemented.\n");
 			return -1;
 		#endif
-		size_t s = strlen(argv[2]);
-		/* TODO: introduce failsafe path resolution */
-		/* remove trailing slashes */
-		if (s > 0 && argv[2][s-1] == '/') {
-			char* last = argv[2] + s - 1;
-			while (*last == '/') {
-				*last = 0;
-				last--;
-			}
-		}
 		char* p = get_pass("enter password  : ");
 		if (!p)
 			return -1;
