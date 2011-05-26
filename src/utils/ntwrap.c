@@ -107,3 +107,27 @@ int munmap(void* start, size_t length)
 		return -1;
 	return 0;
 }
+
+static int32_t win32_get_ucs2_length(const char* utf8_str)
+{
+	int32_t res;
+	res = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_str, -1,
+		0, 0)))
+	return res;
+}
+
+wchar_t* utf8_to_ucs2(const char* utf8_str)
+{
+	int32_t s = win32_get_ucs2_length(utf8_str);
+	if (!s)
+		return 0;
+	wchar_t* wcstr = calloc(s, sizeof(wchar_t));
+	if (!wcstr)
+		return 0;
+	if (s != MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_str,
+	-1, wcstr, s)) {
+		free(wcstr);
+		return 0;
+	}
+	return wcstr;
+}
