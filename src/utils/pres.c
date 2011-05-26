@@ -118,6 +118,11 @@ __export_function int k_pres_add_file
 		basename_off -= name_off;
 	}
 	size_t namelen = strlen(name)+1;
+	if (namelen == 1) {
+		/* above algorithm might be broken when this happens */
+		fprintf(stderr, "fix me: k_pres_add_file\n");
+		exit(1);
+	}
 
 	/* not adding hidden objects */
 	n = name;
