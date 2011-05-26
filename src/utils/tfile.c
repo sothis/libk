@@ -40,7 +40,6 @@ static char* absfilename(const char* name)
 	size_t wds, ns;
 	char* p = 0;
 	char* cwd = 0;
-	char* last;
 
 	ns = strlen(name);
 	if (!ns)
@@ -59,19 +58,16 @@ static char* absfilename(const char* name)
 
 	if (name[0] == '/') {
 		memcpy(p, name, ns);
-		last = p+ns-1;
 	}
 #ifdef __WINNT__
 	else if((strlen(name) > 2) && name[1] == ':' && name[2] == '\\') {
 		memcpy(p, name, ns);
-		last = p+ns-1;
 	}
 #endif
 	else {
 		memcpy(p, cwd, wds);
 		p[wds] = '/';
 		memcpy(p+wds+1, name, ns);
-		last = p+ns+wds;
 	}
 
 	free(cwd);
