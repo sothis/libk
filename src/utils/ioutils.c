@@ -38,6 +38,7 @@
 #define O_NOATIME	_O_BINARY
 #endif
 
+__attribute__((unused))
 static int getln(char** lineptr, size_t* n, FILE* stream)
 {
 	int nchars_avail;
