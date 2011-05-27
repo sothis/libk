@@ -127,13 +127,13 @@ SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
 SRC		+= ./src/utils/unittest.c
 SRC		+= ./src/utils/mempool.c
+SRC		+= ./src/utils/ioutils.c
 
 ifdef PLAT_WINNT
 SRC		+= ./src/utils/ntwrap.c
 endif
 
 SRCBIN		+= ./src/ktool/main.c
-SRCBIN		+= ./src/ktool/getln.c
 
 ################################################################################
 

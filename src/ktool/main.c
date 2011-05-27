@@ -110,42 +110,6 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 	return FTW_CONTINUE;
 }
 
-char* get_pass(const char* prompt)
-{
-	size_t n = 1024;
-	/* TODO: when moving this into libk, use locked memory */
-	char* pass = calloc(n+1, 1);
-	struct termios old, new;
-	int nread;
-
-
-	/* TODO: this is error-prone when sending a signal while being
-	 * in getline(). */
-	if (tcgetattr(fileno(stdin), &old) != 0)
-		return 0;
-	new = old;
-	new.c_lflag &= ~ECHO;
-	if (tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0)
-		return 0;
-
-	printf("%s", prompt);
-	fflush(stdout);
-	fflush(stdin);
-	nread = getln(&pass, &n, stdin);
-
-	tcsetattr(fileno(stdin), TCSAFLUSH, &old);
-	printf("\n");
-	fflush(stdout);
-	fflush(stdin);
-
-	if (nread == -1) {
-		printf("can't create safe password prompt\n");
-		free(pass);
-		return 0;
-	}
-	pass[nread-1] = 0;
-	return pass;
-}
 #else
 
 static int
@@ -166,38 +130,6 @@ ft_walk(const char* path, size_t baseoff)
 	return 0;
 }
 
-char* get_pass(const char* prompt)
-{
-	/* TODO: this is rubbish. implement something better */
-	/* TODO: when moving this into libk, use locked memory */
-	char* pass = calloc(1, 4097);
-	int i = 0;
-	char a;
-
-	if (!pass)
-		return 0;
-
-	printf("%s", prompt);
-	fflush(stdout);
-	while(i <= 4096) {
-		fflush(stdin);
-		a = getch();
-		if (a > 47 && a < 123) {
-			pass[i]=a;
-			i++;
-		} else if(a == 8) {
-			if(i > 0)
-				i--;
-		} else if(a == 13) {
-			pass[i] = 0;
-			break;
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-	fflush(stdin);
-	return pass;
-}
 #endif
 
 static int import_directory
@@ -269,7 +201,7 @@ static int export_all(const char* filename, const char* dir)
 	}
 
 	if (r) {
-		pass = get_pass("enter password  : ");
+		pass = k_get_pass("enter password  : ");
 		if (!pass) {
 			perror("get_pass");
 			return -1;
@@ -392,10 +324,10 @@ int main(int argc, char* argv[], char* envp[])
 		return import_directory(argv[2], argv[3], 0);
 	}
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
-		char* p = get_pass("enter password  : ");
+		char* p = k_get_pass("enter password  : ");
 		if (!p)
 			return -1;
-		char* p2 = get_pass("retype password : ");
+		char* p2 = k_get_pass("retype password : ");
 		if (!p2) {
 			free(p);
 			return -1;

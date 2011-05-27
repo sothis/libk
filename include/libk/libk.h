@@ -25,6 +25,7 @@
 #include <libk/internal/pres.h>
 #include <libk/internal/mempool.h>
 #include <libk/internal/tfile.h>
+#include <libk/internal/ioutils.h>
 
 typedef void (*k_err_fn)(enum k_error_e, enum k_errorlevel_e, const char*);
 
