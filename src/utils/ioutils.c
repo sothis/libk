@@ -22,6 +22,7 @@
 
 #ifdef __WINNT__
 #include <windows.h>
+#include <conio.h>
 #include "ntwrap.h"
 #else
 #include <ftw.h>
@@ -29,7 +30,10 @@
 #endif
 
 #if defined(__DARWIN__)
-#define O_NOATIME	0
+#define O_NOATIME		0
+#define FTW_CONTINUE		0
+#define FTW_STOP		~0
+#define FTW_ACTIONRETVAL	0
 #elif defined(__WINNT__)
 #define O_NOATIME	_O_BINARY
 #endif
@@ -203,10 +207,30 @@ k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 	return 0;
 }
 #else
+
+/* TODO: make this threadlocal */
+static int(*_ftw)(const char*, size_t) = 0;
+
+static int
+ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
+{
+	/* only match regular files (hardlinks currently remain as copies) */
+	if (type != FTW_F)
+		return FTW_CONTINUE;
+	if (!S_ISREG(sb->st_mode))
+		return FTW_CONTINUE;
+
+	return _ftw(path, ftw->base);
+}
+
 __export_function int
 k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
-	return 0;
+	int res;
+	_ftw = ftw_fn;
+	/* stay within the same filesystem, do not follow symlinks */
+	res = nftw(path, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS);
+	return res;
 }
 #endif
 

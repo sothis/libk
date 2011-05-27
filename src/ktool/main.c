@@ -24,7 +24,6 @@
 extern int getln(char** lineptr, size_t* n, FILE* stream);
 #else
 #include <windows.h>
-#include <conio.h>
 #define MKDIR_MODE
 #endif
 
@@ -37,11 +36,6 @@ static void __term_handler(int sig, siginfo_t* info, void* unused)
 }
 #endif
 
-#ifdef __DARWIN__
-#define FTW_CONTINUE		0
-#define FTW_STOP		~0
-#define FTW_ACTIONRETVAL	0
-#endif
 
 #ifdef __WINNT__
 static uint32_t oldicp, oldocp;
@@ -84,34 +78,6 @@ static void __init(void)
 }
 
 struct pres_file_t _cur_pres;
-
-#ifndef __WINNT__
-static int
-ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
-{
-	int r;
-	/* only match regular files (hardlinks currently remain as copies) */
-	if (type != FTW_F)
-		return FTW_CONTINUE;
-	if (!S_ISREG(sb->st_mode))
-		return FTW_CONTINUE;
-
-	printf("importing: %s\n", path);
-	if ((r = k_pres_add_file(&_cur_pres, path, ftw->base)) != 0) {
-		if (r == 1)
-			printf("\tskipped\n");
-		if (r == -1) {
-			perror("pres_add_file");
-			return FTW_STOP;
-		}
-	} else
-		printf("\tsuccess\n");
-
-	return FTW_CONTINUE;
-}
-
-#else
-
 static int
 ft_walk(const char* path, size_t baseoff)
 {
@@ -129,8 +95,6 @@ ft_walk(const char* path, size_t baseoff)
 		printf("\tsuccess\n");
 	return 0;
 }
-
-#endif
 
 static int import_directory
 (const char* directory, const char* filename, const char* pass)
@@ -163,20 +127,13 @@ static int import_directory
 		perror("chdir");
 		return -1;
 	}
-#ifndef __WINNT__
-	/* stay within the same filesystem, do not follow symlinks */
-	if (nftw(".", ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS)) {
-		free(cwd);
-		perror("nftw");
-		return -1;
-	}
-#else
+
 	if (k_ftw(".", ft_walk)) {
 		free(cwd);
 		perror("k_winftw");
 		return -1;
 	}
-#endif
+
 	if (k_pres_close(&_cur_pres)) {
 		free(cwd);
 		perror("pres_close");
