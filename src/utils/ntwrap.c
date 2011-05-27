@@ -82,6 +82,7 @@ void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off)
 	uint32_t l = o & 0xFFFFFFFF;
 	uint32_t h = (o >> 32) & 0xFFFFFFFF;
 
+	printf("map: %lu + %lu\n", h, l);
 	if (!fstat(fd, &st))
 		len = st.st_size;
 	else

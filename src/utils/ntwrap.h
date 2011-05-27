@@ -15,6 +15,10 @@
 #include <sys/types.h>
 #include <direct.h>
 
+#define fstat fstat64
+#define stat stat64
+#define off_t off64_t
+
 #define MAP_FAILED	((void*)~0ul)
 #define PROT_READ       0x01
 #define PROT_WRITE      0x02
