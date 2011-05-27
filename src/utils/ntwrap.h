@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <direct.h>
 
+#define lseek lseek64
 #define fstat fstat64
 #define stat stat64
 #define off_t off64_t
