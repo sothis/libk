@@ -363,47 +363,46 @@ out:
 		free(p);
 	return res;
 }
-#if 0
+
+#ifdef __WINNT__
 __export_function int
-winftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
+k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
-	int r;
 	char d[65536];
 	char mask[65536];
 	HANDLE h;
 	WIN32_FIND_DATAW fdat;
 
 	snprintf(mask, 65535, "%s/*.*", path);
+	wchar_t* wcmask = utf8_to_ucs2(mask);
 
-	h = FindFirstFileW(mask, &fdat);
+	h = FindFirstFileW(wcmask, &fdat);
+	free(wcmask);
 
 	while (h != INVALID_HANDLE_VALUE) {
 		if(fdat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-			if(strcmp(fdat.cFileName, ".") &&
-			strcmp(fdat.cFileName, "..")) {
-				snprintf(d, 65535, "%s/%s", path,
-					fdat.cFileName);
-				winftw(d);
+			char* mbfile = ucs2_to_utf8(fdat.cFileName);
+			if(strcmp(mbfile, ".") && strcmp(mbfile, "..")) {
+				snprintf(d, 65535, "%s/%s", path, mbfile);
+				k_ftw(d, ftw_fn);
 			}
+			free(mbfile);
 		}
 		else {
-			snprintf(d, 65535, "%s/%s", path, fdat.cFileName);
-			printf("importing: %s\n", d);
-			if ((r = k_pres_add_file(&_cur_pres, d, strlen(path)+1))
-			!= 0) {
-				if (r == 1)
-					printf("\tskipped\n");
-				if (r == -1) {
-					perror("pres_add_file");
-					exit(1);
-				}
-			} else
-				printf("\tsuccess\n");
+			char* mbfile = ucs2_to_utf8(fdat.cFileName);
+			snprintf(d, 65535, "%s/%s", path, mbfile);
+			ftw_fn(d, strlen(path)+1);
 		}
 		if (!FindNextFileW(h, &fdat))
 			break;
 	}
 	FindClose(h);
+	return 0;
+}
+#else
+__export_function int
+k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
+{
 	return 0;
 }
 #endif

@@ -149,45 +149,20 @@ char* get_pass(const char* prompt)
 #else
 
 static int
-winftw(const char* path)
+ft_walk(const char* path, size_t baseoff)
 {
 	int r;
-	char d[65536];
-	char mask[65536];
-	HANDLE h;
-	WIN32_FIND_DATA fdat;
 
-	snprintf(mask, 65535, "%s/*.*", path);
-
-	h = FindFirstFile(mask, &fdat);
-
-	while (h != INVALID_HANDLE_VALUE) {
-		if(fdat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-			if(strcmp(fdat.cFileName, ".") &&
-			strcmp(fdat.cFileName, "..")) {
-				snprintf(d, 65535, "%s/%s", path,
-					fdat.cFileName);
-				winftw(d);
-			}
+	printf("importing: %s\n", path);
+	if ((r = k_pres_add_file(&_cur_pres, path, baseoff)) != 0) {
+		if (r == 1)
+			printf("\tskipped\n");
+		if (r == -1) {
+			perror("pres_add_file");
+			return -1;
 		}
-		else {
-			snprintf(d, 65535, "%s/%s", path, fdat.cFileName);
-			printf("importing: %s\n", d);
-			if ((r = k_pres_add_file(&_cur_pres, d, strlen(path)+1))
-			!= 0) {
-				if (r == 1)
-					printf("\tskipped\n");
-				if (r == -1) {
-					perror("pres_add_file");
-					exit(1);
-				}
-			} else
-				printf("\tsuccess\n");
-		}
-		if (!FindNextFile(h, &fdat))
-			break;
-	}
-	FindClose(h);
+	} else
+		printf("\tsuccess\n");
 	return 0;
 }
 
@@ -264,9 +239,9 @@ static int import_directory
 		return -1;
 	}
 #else
-	if (winftw(".")) {
+	if (k_ftw(".", ft_walk)) {
 		free(cwd);
-		perror("winftw");
+		perror("k_winftw");
 		return -1;
 	}
 #endif
