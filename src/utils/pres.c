@@ -574,8 +574,6 @@ static int _get_rtbl(struct pres_file_t* pf)
 		_cryptonce(pf->scipher, pf->rtbl, pf->dhdr.resource_table_iv,
 			sz_res_tbl);
 
-printf("e: %lu\n", _get_rtbl_entries(pf));
-
 	if (_verify_rtbl(pf))
 		goto fail;
 
