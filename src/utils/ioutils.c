@@ -173,6 +173,8 @@ out:
 }
 
 #ifdef __WINNT__
+/* TODO: allocate memory dynamically; use a stack for storing subdirs in
+ * order to process this iterative rather then recursive */
 __export_function int
 k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
@@ -235,11 +237,15 @@ k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 }
 #endif
 
+
+/* TODO: return a handle to password memory and adjust apis to make use of it,
+ * the password memory shall be locked and on randomized heap,
+ * maybe encrypted with a session key. use this directly in the key derivation
+ * abstraction. check if the linux key retention api is helpful here. */
 #ifdef __WINNT__
 __export_function char* k_get_pass(const char* prompt)
 {
 	/* TODO: this is rubbish. implement something better */
-	/* TODO: when moving this into libk, use locked memory */
 	char* pass = calloc(1, 4097);
 	int i = 0;
 	char a;
@@ -247,7 +253,7 @@ __export_function char* k_get_pass(const char* prompt)
 	if (!pass)
 		return 0;
 
-	printf("%s", prompt);
+	fprintf(stdout, "%s", prompt);
 	fflush(stdout);
 	while(i <= 4096) {
 		fflush(stdin);
@@ -263,7 +269,7 @@ __export_function char* k_get_pass(const char* prompt)
 			break;
 		}
 	}
-	printf("\n");
+	fprintf(stdout, "\n");
 	fflush(stdout);
 	fflush(stdin);
 	return pass;
@@ -272,11 +278,9 @@ __export_function char* k_get_pass(const char* prompt)
 __export_function char* k_get_pass(const char* prompt)
 {
 	size_t n = 1024;
-	/* TODO: when moving this into libk, use locked memory */
 	char* pass = calloc(n+1, 1);
 	struct termios old, new;
 	int nread;
-
 
 	/* TODO: this is error-prone when sending a signal while being
 	 * in getline(). */
@@ -287,18 +291,17 @@ __export_function char* k_get_pass(const char* prompt)
 	if (tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0)
 		return 0;
 
-	printf("%s", prompt);
+	fprintf(stdout, "%s", prompt);
 	fflush(stdout);
 	fflush(stdin);
 	nread = getln(&pass, &n, stdin);
 
 	tcsetattr(fileno(stdin), TCSAFLUSH, &old);
-	printf("\n");
+	fprintf(stdout, "\n");
 	fflush(stdout);
 	fflush(stdin);
 
 	if (nread == -1) {
-		printf("can't create safe password prompt\n");
 		free(pass);
 		return 0;
 	}
