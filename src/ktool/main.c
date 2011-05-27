@@ -147,6 +147,45 @@ char* get_pass(const char* prompt)
 	return pass;
 }
 #else
+
+static int
+winftw(const char* path)
+{
+	char d[65536];
+	char mask[65536];
+	HANDLE h;
+	WIN32_FIND_DATA fdat;
+
+	sprintf(mask, "%s/*.*", path);
+	//sprintf(d, "%s", path);
+
+	h = FindFirstFile(mask, &fdat);
+
+	while (h != INVALID_HANDLE_VALUE) {
+		//printf("found : %s\n", fdat.cFileName);
+		if(fdat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			if(strcmp(fdat.cFileName, ".") &&
+			strcmp(fdat.cFileName, "..")) {
+				//printf("\t\tdir : %s\n",  fdat.cFileName);
+				sprintf(d, "%s/%s", path, fdat.cFileName);
+				//printf("d : %s\n", d);
+				winftw(d);
+			}
+		}
+		else {
+			sprintf(d, "%s/%s", path, fdat.cFileName);
+			printf("file: %s\n", d);
+			//sprintf(d, "%s/%s", d, fdat.cFileName);
+			//printf("\tf : %s\n", d);
+		}
+		if (!FindNextFile(h, &fdat))
+			break;
+	}
+
+	FindClose(h);
+	return 0;
+}
+
 char* get_pass(const char* prompt)
 {
 	/* TODO: this is rubbish. implement something better */
@@ -214,10 +253,20 @@ static int import_directory
 	}
 #ifndef __WINNT__
 	/* stay within the same filesystem, do not follow symlinks */
-	if (nftw(".", ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS))
+	if (nftw(".", ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS)) {
+		free(cwd);
+		perror("nftw");
 		return -1;
+	}
+#else
+	if (winftw(".")) {
+		free(cwd);
+		perror("winftw");
+		return -1;
+	}
 #endif
 	if (k_pres_close(&_cur_pres)) {
+		free(cwd);
 		perror("pres_close");
 		return -1;
 	}
@@ -360,17 +409,9 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
-		#ifdef __WINNT__
-			printf("not yet implemented.\n");
-			return -1;
-		#endif
 		return import_directory(argv[2], argv[3], 0);
 	}
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
-		#ifdef __WINNT__
-			printf("not yet implemented.\n");
-			return -1;
-		#endif
 		char* p = get_pass("enter password  : ");
 		if (!p)
 			return -1;
