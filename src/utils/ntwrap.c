@@ -77,22 +77,12 @@ void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off)
 {
 	HANDLE hmap;
 	void* temp;
-	off_t len;
-	struct stat st;
 	uint64_t o = off;
 	uint32_t l = o & 0xffffffff;
 	uint32_t h = (o >> 32) & 0xffffffff;
 
 	printf("map: %u + %u\n", h, l);
-#if 0
-	if (!fstat(fd, &st))
-		len = st.st_size;
-	else
-		return MAP_FAILED;
 
-	if ((length + off) > len)
-		length = len - off;
-#endif
 	hmap = CreateFileMapping((HANDLE)_get_osfhandle(fd), 0, PAGE_WRITECOPY,
 		0, 0, 0);
 
