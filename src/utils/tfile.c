@@ -24,8 +24,10 @@
 #include "ntwrap.h"
 #endif
 
-#if defined(__DARWIN__) || defined(__WINNT__)
-#define O_NOATIME		0
+#if defined(__DARWIN__)
+#define O_NOATIME	0
+#elif defined(__WINNT__)
+#define O_NOATIME	_O_BINARY
 #endif
 
 #include <libgen.h>

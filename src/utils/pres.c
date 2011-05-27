@@ -27,8 +27,10 @@
 #endif
 
 
-#if defined(__DARWIN__) || defined(__WINNT__)
-#define O_NOATIME		0
+#if defined(__DARWIN__)
+#define O_NOATIME	0
+#elif defined(__WINNT__)
+#define O_NOATIME	_O_BINARY
 #endif
 
 static int pres_map(struct mmap_t* res, int fd, size_t len, off_t offset)
@@ -151,15 +153,16 @@ __export_function int k_pres_add_file
 	if (pf->scipher)
 		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
-	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
+	while ((nread = _read(fd, buf, 16*1024*1024)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(h, buf, nread);
 		if (pf->scipher)
 			k_sc_update(pf->scipher, buf, buf, nread);
 		while (total != nread) {
 			nwritten = write(pf->fd, buf + total, nread - total);
-			if (nwritten < 0)
+			if (nwritten < 0) {
 				goto unrecoverable_err;
+			}
 			total += nwritten;
 		}
 		filebytes += total;

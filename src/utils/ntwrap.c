@@ -57,7 +57,7 @@ int mkstemp(char* template)
 	wchar_t* wc = utf8_to_ucs2(template);
 	if (!wc)
 		return -1;
-	return _wopen(wc, O_RDWR|O_CREAT|O_EXCL, 0600);
+	return _wopen(wc, O_RDWR|O_CREAT|O_EXCL|_O_BINARY, 0600);
 }
 
 int fchmod(int fd, mode_t mode)
