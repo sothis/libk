@@ -15,13 +15,11 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #ifndef __WINNT__
-#include <ftw.h>
-#include <termios.h>
 #define MKDIR_MODE ,0700
-
-extern int getln(char** lineptr, size_t* n, FILE* stream);
 #else
 #include <windows.h>
 #define MKDIR_MODE
