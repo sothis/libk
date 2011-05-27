@@ -40,6 +40,9 @@ __export_function struct k_prng_t* k_prng_init
 		err = K_ENOMEM;
 		goto k_prng_init_err;
 	}
+	c->fd_urandom = -1;
+	c->fd_random = -1;
+
 	c->prng = prng_get_by_id(prng);
 	if (!c->prng) {
 		err = K_ENOCIPHER;
@@ -82,8 +85,12 @@ __export_function void k_prng_finish
 (struct k_prng_t* c)
 {
 	if (c) {
-		close(c->fd_urandom);
-		close(c->fd_random);
+	#ifndef __WINNT__
+		if (c->fd_urandom != -1)
+			close(c->fd_urandom);
+		if (c->fd_random != -1)
+			close(c->fd_random);
+	#endif
 		if (c->ctx)
 			k_locked_free(c->ctx, c->alloced_ctxsize);
 		k_free(c);
