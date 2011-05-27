@@ -103,7 +103,18 @@ __export_function int k_pres_add_file
 	memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
 	k_prng_update(prng, data_nonce, pf->nonce_size);
 
+	#ifdef __WINNT__
+	wchar_t* wc = utf8_to_ucs2(name);
+	if (!wc)
+		fd = -1;
+	else {
+		fd = _wopen(wc, O_RDWR|_O_BINARY);
+		free(wc);
+	}
+	#else
 	fd = open(name, O_RDONLY | O_NOATIME);
+	#endif
+
 	if (fd == -1)
 		goto recoverable_err;
 
