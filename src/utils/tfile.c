@@ -93,12 +93,9 @@ static void trollback_one(struct tfile_t* tf, size_t off)
 {
 	close(tf->fd);
 	#ifdef __WINNT__
-	printf("h1\n");
 	wchar_t* wtf = utf8_to_ucs2(tf->tmpfilename);
 	if (wtf) {
-		printf("h2: %ls\n", wtf);
-		if (_wunlink(wtf))
-			perror("_wunlink");
+		_wunlink(wtf);
 		free(wtf);
 	}
 	#else
