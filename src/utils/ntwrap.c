@@ -15,6 +15,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 
 long sysconf(int name)
 {
