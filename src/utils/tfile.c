@@ -21,6 +21,7 @@
 #include <errno.h>
 
 #ifdef __WINNT__
+#include <windows.h>
 #include "ntwrap.h"
 #endif
 
@@ -362,3 +363,47 @@ out:
 		free(p);
 	return res;
 }
+#if 0
+__export_function int
+winftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
+{
+	int r;
+	char d[65536];
+	char mask[65536];
+	HANDLE h;
+	WIN32_FIND_DATAW fdat;
+
+	snprintf(mask, 65535, "%s/*.*", path);
+
+	h = FindFirstFileW(mask, &fdat);
+
+	while (h != INVALID_HANDLE_VALUE) {
+		if(fdat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			if(strcmp(fdat.cFileName, ".") &&
+			strcmp(fdat.cFileName, "..")) {
+				snprintf(d, 65535, "%s/%s", path,
+					fdat.cFileName);
+				winftw(d);
+			}
+		}
+		else {
+			snprintf(d, 65535, "%s/%s", path, fdat.cFileName);
+			printf("importing: %s\n", d);
+			if ((r = k_pres_add_file(&_cur_pres, d, strlen(path)+1))
+			!= 0) {
+				if (r == 1)
+					printf("\tskipped\n");
+				if (r == -1) {
+					perror("pres_add_file");
+					exit(1);
+				}
+			} else
+				printf("\tsuccess\n");
+		}
+		if (!FindNextFileW(h, &fdat))
+			break;
+	}
+	FindClose(h);
+	return 0;
+}
+#endif

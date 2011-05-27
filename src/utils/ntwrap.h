@@ -26,6 +26,8 @@
 #define MAP_PRIVATE     0x02
 #define _SC_PAGE_SIZE	0x1e
 
+#define WC_ERR_INVALID_CHARS	0x00000080
+
 long sysconf(int name);
 int mkstemp(char *template);
 int fchmod(int fildes, mode_t mode);
@@ -34,5 +36,6 @@ void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off);
 int munmap(void* start, size_t length);
 
 wchar_t* utf8_to_ucs2(const char* utf8_str);
+char* ucs2_to_utf8(const wchar_t* ucs2_str);
 
 #endif /* _NTWRAP_H */

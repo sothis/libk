@@ -102,7 +102,7 @@ int munmap(void* start, size_t length)
 	return 0;
 }
 
-static int32_t win32_get_ucs2_length(const char* utf8_str)
+static int32_t _get_ucs2_length(const char* utf8_str)
 {
 	int32_t res;
 	res = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_str, -1,
@@ -110,9 +110,17 @@ static int32_t win32_get_ucs2_length(const char* utf8_str)
 	return res;
 }
 
+static int32_t _get_utf8_length(const wchar_t* ucs2_str)
+{
+	int32_t res;
+	res = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, ucs2_str, -1,
+		0, 0, 0, 0);
+	return res;
+}
+
 wchar_t* utf8_to_ucs2(const char* utf8_str)
 {
-	int32_t s = win32_get_ucs2_length(utf8_str);
+	int32_t s = _get_ucs2_length(utf8_str);
 	if (!s)
 		return 0;
 	wchar_t* wcstr = calloc(s, sizeof(wchar_t));
@@ -124,4 +132,20 @@ wchar_t* utf8_to_ucs2(const char* utf8_str)
 		return 0;
 	}
 	return wcstr;
+}
+
+char* ucs2_to_utf8(const wchar_t* ucs2_str)
+{
+	int32_t s = _get_utf8_length(ucs2_str);
+	if (!s)
+		return 0;
+	char* mbstr = calloc(s, sizeof(char));
+	if (!mbstr)
+		return 0;
+	if (s != WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, ucs2_str,
+	-1, mbstr, s, 0, 0)) {
+		free(mbstr);
+		return 0;
+	}
+	return mbstr;
 }
