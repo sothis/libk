@@ -80,10 +80,10 @@ void* mmap(void* start, size_t length, int prot, int flags, int fd, off_t off)
 	off_t len;
 	struct stat st;
 	uint64_t o = off;
-	uint32_t l = o & 0xFFFFFFFF;
-	uint32_t h = (o >> 32) & 0xFFFFFFFF;
+	uint32_t l = o & 0xffffffff;
+	uint32_t h = (o >> 32) & 0xffffffff;
 
-	printf("map: %lu + %lu\n", h, l);
+	printf("map: %u + %u\n", h, l);
 	if (!fstat(fd, &st))
 		len = st.st_size;
 	else
