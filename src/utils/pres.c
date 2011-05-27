@@ -153,7 +153,7 @@ __export_function int k_pres_add_file
 	if (pf->scipher)
 		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
-	while ((nread = _read(fd, buf, 16*1024*1024)) > 0) {
+	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
 		ssize_t nwritten, total = 0;
 		k_hash_update(h, buf, nread);
 		if (pf->scipher)
