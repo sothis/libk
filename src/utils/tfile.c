@@ -91,16 +91,19 @@ struct tfile_t {
 
 static void trollback_one(struct tfile_t* tf, size_t off)
 {
+	close(tf->fd);
 	#ifdef __WINNT__
+	printf("h1\n");
 	wchar_t* wtf = utf8_to_ucs2(tf->tmpfilename);
 	if (wtf) {
-		_wunlink(wtf);
+		printf("h2: %ls\n", wtf);
+		if (_wunlink(wtf))
+			perror("_wunlink");
 		free(wtf);
 	}
 	#else
 	unlink(tf->tmpfilename);
 	#endif
-	close(tf->fd);
 	free(tf->filename);
 	free(tf->tmpfilename);
 	pool_cut(&mappool, off, sizeof(struct tfile_t));
@@ -241,6 +244,7 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 	goto out;
 err:
 	if (tf.fd != -1) {
+		close(tf.fd);
 		#ifdef __WINNT__
 		wchar_t* wtf = utf8_to_ucs2(tf.tmpfilename);
 		if (wtf) {
@@ -250,7 +254,6 @@ err:
 		#else
 		unlink(tf.tmpfilename);
 		#endif
-		close(tf.fd);
 	}
 	if (tf.filename)
 		free(tf.filename);
