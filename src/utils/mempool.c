@@ -12,10 +12,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* TODO: overflow checking */
+
 static int pool_set_pages(struct mempool_t* p, ssize_t pagediff)
 {
 	size_t old = p->pages;
-	if (p->pages + pagediff < 0)
+	if (((ssize_t)p->pages + pagediff) < 0)
 		p->pages = 0;
 	else
 		p->pages += pagediff;
