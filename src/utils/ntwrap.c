@@ -60,6 +60,8 @@ int mkstemp(char* template)
 		char* last = s+l;
 		if (*last == 'X')
 			*last = randchar();
+		else
+			break;
 	}
 
 	wchar_t* wc = utf8_to_ucs2(template);
