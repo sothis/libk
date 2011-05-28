@@ -184,6 +184,7 @@ __export_function int k_pres_add_file
 		goto recoverable_err;
 	}
 
+	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
 
