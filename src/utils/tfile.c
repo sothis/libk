@@ -118,11 +118,11 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 
 	if (fchmod(tf->fd, tf->mode))
 		goto err;
-
+#if 0
 	/* TODO: make this optional */
 	if (fsync(tf->fd))
 		goto err;
-
+#endif
 	if (close(tf->fd))
 		goto err;
 	/* TODO: rename is broken on windows. it doesn't allow to replace

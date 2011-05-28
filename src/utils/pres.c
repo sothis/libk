@@ -183,11 +183,11 @@ __export_function int k_pres_add_file
 			goto unrecoverable_err;
 		goto recoverable_err;
 	}
-
+#if 0
 	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
-
+#endif
 	pf->cur_resentries++;
 
 	k_hash_final(h,
