@@ -50,11 +50,18 @@ int mkstemp(char* template)
 	 * is for development purposes only */
 
 	char* s = template;
-	while(*s) {
-		if (*s == 'X')
-			*s = randchar();
-		s++;
+	if (!s)
+		return -1;
+	size_t l = strlen(template);
+	if (!l)
+		return -1;
+
+	while (l--) {
+		char* last = s+l;
+		if (*last == 'X')
+			*last = randchar();
 	}
+
 	wchar_t* wc = utf8_to_ucs2(template);
 	if (!wc)
 		return -1;
