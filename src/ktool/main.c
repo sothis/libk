@@ -249,11 +249,51 @@ next:
 	return 0;
 }
 
+static int list_all(const char* filename)
+{
+	char* pass = 0;
+	int r = k_pres_needs_pass(filename);
+	if (r < 0) {
+		perror("k_pres_needs_pass");
+		return -1;
+	}
+
+	if (r) {
+		pass = k_get_pass("enter password  : ");
+		if (!pass) {
+			perror("get_pass");
+			return -1;
+		}
+	}
+
+	if (k_pres_open(&_cur_pres, filename, pass)) {
+		perror("pres_open");
+		return -1;
+	}
+	if (pass)
+		free(pass);
+
+	uint64_t e = k_pres_res_count(&_cur_pres);
+
+	for (uint64_t i = 1; i <= e; ++i) {
+		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
+		printf("%lu:\t'%s'\n", i, name);
+	}
+
+	if (k_pres_close(&_cur_pres)) {
+		perror("pres_close");
+		return -1;
+	}
+	return 0;
+}
+
 static void print_help(void)
 {
 	k_version_print();
 	fprintf(stderr, " ktool test                    " \
 		"- run unittests\n");
+	fprintf(stderr, " ktool ls   <infile>" \
+		"- list contents of pres container\n");
 	fprintf(stderr, " ktool imp  <indir> <outfile>  " \
 		"- import directory into pres container\n");
 	fprintf(stderr, " ktool imps <indir> <outfile>  " \
@@ -300,6 +340,8 @@ int main(int argc, char* argv[], char* envp[])
 	}
 	if (!strcmp(argv[1], "exp") && (argc > 3))
 		return export_all(argv[2], argv[3]);
+	if (!strcmp(argv[1], "ls") && (argc > 2))
+		return list_all(argv[2]);
 	if (!strcmp(argv[1], "test")) {
 		int failed = k_run_unittests(1);
 		if (failed)
