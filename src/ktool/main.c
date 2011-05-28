@@ -275,7 +275,7 @@ static int list_all(const char* filename)
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
 
-	for (uint64_t i = 1; i <= e; ++i) {
+	for (long i = 1; i <= e; ++i) {
 		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
 		printf("%lu:\t'%s'\n", i, name);
 	}
