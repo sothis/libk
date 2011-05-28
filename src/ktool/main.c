@@ -81,16 +81,14 @@ ft_walk(const char* path, size_t baseoff)
 {
 	int r;
 
-	printf("importing: %s\n", path);
 	if ((r = k_pres_add_file(&_cur_pres, path, baseoff)) != 0) {
 		if (r == 1)
-			printf("\tskipped\n");
+			printf("skipped: '%s'\n", path);
 		if (r == -1) {
 			perror("pres_add_file");
 			return -1;
 		}
-	} else
-		printf("\tsuccess\n");
+	}
 	return 0;
 }
 
@@ -126,6 +124,7 @@ static int import_directory
 		return -1;
 	}
 
+	printf("importing '%s' ...\n", directory);
 	if (k_ftw(".", ft_walk)) {
 		free(cwd);
 		perror("k_winftw");
@@ -177,11 +176,10 @@ static int export_all(const char* filename, const char* dir)
 	}
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
-
+	printf("exporting %lu items from '%s' ...\n", (long)e, filename);
 next:
 	for (uint64_t i = 1; i <= e; ++i) {
 		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
-		printf("exporting '%s'\n", name);
 
 		if (k_tcreate_dirs(name)) {
 			perror("k_tcreate_dirs");
