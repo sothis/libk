@@ -10,6 +10,7 @@
 
 #include <libk/libk.h>
 #include "utils/sections.h"
+#include "utils/err.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +72,20 @@ static char* absfilename(const char* name)
 		p[wds] = '/';
 		memcpy(p+wds+1, name, ns);
 	}
+
+#ifdef __WINNT__
+/* winnt CreateFile API's truncate trailing spaces in object names */
+	size_t l = strlen(p);
+	while (l) {
+		l--;
+		char* last = p+l;
+		if (*last == '\\')
+			*last = '/';
+		if (l && *last == '/' && *(last-1) == ' ') {
+			*(last-1) = '/';
+		}
+	}
+#endif
 
 	free(cwd);
 	return p;
@@ -229,9 +244,17 @@ __export_function int k_tcreat(const char* name, mode_t mode)
 		goto err;
 
 	strcpy(tf.tmpfilename, tf.filename);
-	char* dir = dirname(tf.tmpfilename);
 
-	sprintf(tf.tmpfilename, "%s/%s", dir, template);
+	size_t l = strlen(tf.tmpfilename);
+	while (l--) {
+		char* last = tf.tmpfilename+l;
+		if (*last == '/' || *last == '\\') {
+			*last = 0;
+			break;
+		}
+	}
+
+	sprintf(tf.tmpfilename+strlen(tf.tmpfilename), "/%s", template);
 
 	if ((tf.fd = mkstemp(tf.tmpfilename)) == -1)
 		goto err;

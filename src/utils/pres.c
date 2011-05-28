@@ -978,10 +978,14 @@ __export_function uint64_t k_pres_res_count(struct pres_file_t* pf)
 }
 
 __export_function const char* k_pres_res_name_by_id
-(struct pres_file_t* pf, uint64_t id)
+(struct pres_file_t* pf, uint64_t id, const char** basename)
 {
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
-	return pool_getmem(&pf->stringpool, table[id-1].filename_offset);
+	const char* res = pool_getmem(&pf->stringpool,
+		table[id-1].filename_offset);
+	if (basename)
+		*basename = res + table[id-1].basename_offset;
+	return res;
 }
 
 __export_function const char* k_pres_res_basename_by_id

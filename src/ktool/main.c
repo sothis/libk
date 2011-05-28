@@ -179,11 +179,12 @@ static int export_all(const char* filename, const char* dir)
 	printf("exporting %lu items from '%s' ...\n", (long)e, filename);
 next:
 	for (uint64_t i = 1; i <= e; ++i) {
-		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
+		const char* name = k_pres_res_name_by_id(&_cur_pres, i, 0);
 
 		if (k_tcreate_dirs(name)) {
+			printf("resource %lu: '%s'\n", (long)i, name);
 			perror("k_tcreate_dirs");
-			exit(1);
+			goto next;
 		}
 
 		struct pres_res_t r;
@@ -191,8 +192,9 @@ next:
 
 		int fd = k_tcreat(name, 0400);
 		if (fd == -1) {
-			perror("tcreat");
-			exit(1);
+			printf("resource %lu: '%s'\n", (long)i, name);
+			perror("k_tcreat");
+			goto next;
 		}
 
 		uint64_t s = k_pres_res_size(&r);
@@ -236,9 +238,118 @@ next:
 			}
 			k_pres_res_unmap(&r);
 		}
+		if (k_tcommit_and_close(fd)) {
+			printf("resource %lu: '%s'\n", (long)i, name);
+			perror("k_tcommit_and_close");
+			goto next;
+		}
 
-		k_tcommit_and_close(fd);
 	}
+
+	if (k_pres_close(&_cur_pres)) {
+		perror("pres_close");
+		return -1;
+	}
+	return 0;
+}
+
+static int exportid(const char* filename, const char* dir, uint64_t id)
+{
+	char* pass = 0;
+	int p = k_pres_needs_pass(filename);
+	if (p < 0) {
+		perror("k_pres_needs_pass");
+		return -1;
+	}
+
+	if (p) {
+		pass = k_get_pass("enter password  : ");
+		if (!pass) {
+			perror("get_pass");
+			return -1;
+		}
+	}
+
+	if (k_pres_open(&_cur_pres, filename, pass)) {
+		perror("pres_open");
+		return -1;
+	}
+	if (pass)
+		free(pass);
+
+	mkdir(dir MKDIR_MODE);
+	if (chdir(dir)) {
+		perror("chdir");
+		exit(1);
+	}
+
+	const char* basename;
+	const char* name;
+	name = k_pres_res_name_by_id(&_cur_pres, id, &basename);
+
+	if (k_tcreate_dirs(name)) {
+		printf("resource: '%s'\n", name);
+		perror("k_tcreate_dirs");
+		exit(1);
+	}
+
+	struct pres_res_t r;
+	k_pres_res_by_id(&_cur_pres, &r, id);
+
+	int fd = k_tcreat(name, 0400);
+	if (fd == -1) {
+		printf("resource %lu: '%s'\n", (long)id, name);
+		perror("k_tcreat");
+		exit(1);
+	}
+
+	uint64_t s = k_pres_res_size(&r);
+	uint64_t mmap_window = 16*1024*1024;
+	size_t niter = s / mmap_window;
+	size_t nlast = s % mmap_window;
+
+	for (uint64_t i = 0; i < niter; ++i) {
+		void* m = k_pres_res_map(&r, mmap_window,
+			i*mmap_window);
+		size_t total = 0;
+		ssize_t nwritten;
+		while (total != mmap_window) {
+			nwritten = write(fd, m + total,
+				mmap_window - total);
+			if (nwritten < 0) {
+				perror("write");
+				k_pres_res_unmap(&r);
+				k_trollback_and_close(fd);
+				return -1;
+			}
+			total += nwritten;
+		}
+		k_pres_res_unmap(&r);
+	}
+	if (nlast) {
+		void* m = k_pres_res_map(&r, nlast,
+			niter*mmap_window);
+		size_t total = 0;
+		ssize_t nwritten;
+		while (total != nlast) {
+			nwritten = write(fd, m + total, nlast - total);
+			if (nwritten < 0) {
+				perror("write");
+				k_pres_res_unmap(&r);
+				k_trollback_and_close(fd);
+				return -1;
+			}
+			total += nwritten;
+		}
+		k_pres_res_unmap(&r);
+	}
+
+	if (k_tcommit_and_close(fd)) {
+		printf("resource %lu: '%s'\n", (long)id, name);
+		perror("k_tcommit_and_close");
+		return -1;
+	}
+
 
 	if (k_pres_close(&_cur_pres)) {
 		perror("pres_close");
@@ -274,7 +385,7 @@ static int list_all(const char* filename)
 	uint64_t e = k_pres_res_count(&_cur_pres);
 
 	for (long i = 1; i <= e; ++i) {
-		const char* name = k_pres_res_name_by_id(&_cur_pres, i);
+		const char* name = k_pres_res_name_by_id(&_cur_pres, i, 0);
 		printf("%lu:\t'%s'\n", i, name);
 	}
 
@@ -338,6 +449,8 @@ int main(int argc, char* argv[], char* envp[])
 	}
 	if (!strcmp(argv[1], "exp") && (argc > 3))
 		return export_all(argv[2], argv[3]);
+	if (!strcmp(argv[1], "expid") && (argc > 4))
+		return exportid(argv[2], argv[3], strtoull(argv[4], 0, 10));
 	if (!strcmp(argv[1], "ls") && (argc > 2))
 		return list_all(argv[2]);
 	if (!strcmp(argv[1], "test")) {
