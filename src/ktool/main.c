@@ -292,7 +292,7 @@ static void print_help(void)
 	k_version_print();
 	fprintf(stderr, " ktool test                    " \
 		"- run unittests\n");
-	fprintf(stderr, " ktool ls   <infile>" \
+	fprintf(stderr, " ktool ls   <infile>           " \
 		"- list contents of pres container\n");
 	fprintf(stderr, " ktool imp  <indir> <outfile>  " \
 		"- import directory into pres container\n");
