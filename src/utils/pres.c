@@ -1038,7 +1038,24 @@ __export_function void* k_pres_res_map
 		length = res->size;
 		offset = 0;
 	}
+#if 0
 	pres_map(&res->map, res->fd, length, res->absoff+offset);
+
+#else
+	res->map.mem = malloc(length);
+	ssize_t nread;
+	size_t total = 0;
+	if (lseek(res->fd, res->absoff+offset, SEEK_SET) == -1)
+		return 0;
+	while ((nread = read(res->fd, res->map.mem+total, length-total)) > 0) {
+		total += nread;
+		if (total == length)
+			break;
+	}
+	if (nread < 0) {
+		return 0;
+	}
+#endif
 
 	if (res->scipher)
 		k_sc_update(res->scipher, res->map.mem,
@@ -1050,7 +1067,11 @@ __export_function void* k_pres_res_map
 __export_function void k_pres_res_unmap
 (struct pres_res_t* res)
 {
+#if 0
 	pres_unmap(&res->map);
+#else
+	free(res->map.mem);
+#endif
 }
 
 __export_function int k_pres_close(struct pres_file_t* pf)
