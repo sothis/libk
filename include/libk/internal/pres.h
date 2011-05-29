@@ -23,7 +23,7 @@
 #define PRES_MAX_DIGEST_LENGTH	128
 #define PRES_MAX_IV_LENGTH	128
 #define PRES_MAX_SIG_LENGTH	32768
-
+#define PRES_IOBUF_SIZE		4*1024*1024
 
 /*
  * _start pointers are absolute offsets from file start
@@ -135,10 +135,12 @@ struct pres_file_t {
 	uint64_t			cur_filesize;
 	uint64_t			cur_rtbl_start;
 	uint64_t			cur_resentries;
+	uint64_t			cur_allocedentries;
 	uint64_t			cur_datapoolstart;
 	uint64_t			cur_datapoolsize;
 	uint64_t			cur_stringpoolstart;
 	uint64_t			cur_stringpoolsize;
+	uint8_t*			iobuf;
 	struct mempool_t		stringpool;
 	struct pres_file_header_t	hdr;
 	struct pres_detached_header_t	dhdr;

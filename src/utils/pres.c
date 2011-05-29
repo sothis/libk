@@ -80,19 +80,10 @@ __export_function int k_pres_add_file
 	size_t filebytes = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
 	k_prng_t* prng = 0;
-	//uint8_t* buf = 0;
-	uint8_t* buf[2*65536];
 
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
-#if 0
-	/* reading a rather large chunk at once to make better use
-	 * of encryption parallelization */
-	buf = malloc(1*1024*1024);
-	if (!buf)
-		goto unrecoverable_err;
-#endif
 
 	if (pf->scipher) {
 		prng = k_prng_init(PRNG_PLATFORM);
@@ -151,25 +142,31 @@ __export_function int k_pres_add_file
 	if (pool_append(&pf->stringpool, name, namelen))
 		goto unrecoverable_err;
 
-	void* temp = realloc(pf->rtbl,
-		sz_res_tbl + (pf->cur_resentries+1)*sz_res_tbl_entry);
-	if (!temp)
-		goto unrecoverable_err;
+	if (pf->cur_allocedentries < (pf->cur_resentries+1)) {
 
-	pf->rtbl = temp;
-	memset(&pf->rtbl->table[pf->cur_resentries], 0, sz_res_tbl_entry);
+		pf->cur_allocedentries += 32768;
+
+		void* temp = realloc(pf->rtbl,
+			sz_res_tbl + pf->cur_allocedentries*sz_res_tbl_entry);
+		if (!temp)
+			goto unrecoverable_err;
+
+		pf->rtbl = temp;
+		memset(&pf->rtbl->table[pf->cur_resentries], 0,
+			32768*sz_res_tbl_entry);
+	}
 
 	k_hash_reset(pf->hash);
 	if (pf->scipher)
 		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
-	while ((nread = read(fd, buf, 2*65536)) > 0) {
+	while ((nread = read(fd, pf->iobuf, PRES_IOBUF_SIZE)) > 0) {
 		ssize_t nwritten, total = 0;
-		k_hash_update(pf->hash, buf, nread);
+		k_hash_update(pf->hash, pf->iobuf, nread);
 		if (pf->scipher)
-			k_sc_update(pf->scipher, buf, buf, nread);
+			k_sc_update(pf->scipher, pf->iobuf, pf->iobuf, nread);
 		while (total != nread) {
-			nwritten = write(pf->fd, buf + total, nread - total);
+			nwritten = write(pf->fd, pf->iobuf+total, nread-total);
 			if (nwritten < 0) {
 				goto unrecoverable_err;
 			}
@@ -231,10 +228,6 @@ recoverable_err:
 out:
 	if (fd != -1)
 		close(fd);
-#if 0
-	if (buf)
-		free(buf);
-#endif
 	if (prng)
 		k_prng_finish(prng);
 	return res;
@@ -644,7 +637,7 @@ valid:
 static int _get_stringpool(struct pres_file_t* pf)
 {
 	struct mmap_t map;
-	if (pool_alloc(&pf->stringpool, 0))
+	if (pool_alloc(&pf->stringpool, pf->rtbl->string_pool_size))
 		return -1;
 
 	if (pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
@@ -700,9 +693,15 @@ static int _pres_open_key
 	if (_get_stringpool(pf))
 		goto failed;
 
+	pf->iobuf = malloc(PRES_IOBUF_SIZE);
+	if (!pf->iobuf)
+		goto failed;
+
 	pf->is_open = 1;
 	return 0;
 failed:
+	if (pf->iobuf)
+		free(pf->iobuf);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
 	if (pf->fd != -1)
@@ -805,6 +804,11 @@ __export_function int k_pres_create
 	pf->rtbl = calloc(1, sz_res_tbl);
 	if (!pf->rtbl)
 		goto err_out;
+	pf->cur_allocedentries = 0;
+
+	pf->iobuf = malloc(PRES_IOBUF_SIZE);
+	if (!pf->iobuf)
+		goto err_out;
 
 	if (pf->hdr.cipher) {
 		if (!opt->key && !opt->pass)
@@ -837,7 +841,7 @@ __export_function int k_pres_create
 	if (pf->fd == -1)
 		goto err_out;
 
-	if (pool_alloc(&pf->stringpool, 0))
+	if (pool_alloc(&pf->stringpool, 8*1024*1024))
 		goto err_out;
 
 	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
@@ -848,6 +852,8 @@ __export_function int k_pres_create
 	return 0;
 
 err_out:
+	if (pf->iobuf)
+		free(pf->iobuf);
 	if (pf->hash)
 		k_hash_finish(pf->hash);
 	if (pf->stringpool.alloced)
@@ -966,6 +972,8 @@ out:
 		pool_free(&pf->stringpool);
 	if (pf->rtbl)
 		free(pf->rtbl);
+	if (pf->iobuf)
+		free(pf->iobuf);
 	memset(pf, 0, sizeof(struct pres_file_t));
 	return res;
 }
