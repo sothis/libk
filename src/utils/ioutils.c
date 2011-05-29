@@ -178,12 +178,12 @@ out:
 __export_function int
 k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
-	char d[65536];
-	char mask[65536];
+	char d[32768];
+	char mask[32768];
 	HANDLE h;
 	WIN32_FIND_DATAW fdat;
 
-	snprintf(mask, 65535, "%s/*.*", path);
+	snprintf(mask, 32767, "%s/*.*", path);
 	wchar_t* wcmask = utf8_to_ucs2(mask);
 
 	h = FindFirstFileW(wcmask, &fdat);
@@ -193,14 +193,14 @@ k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 		if(fdat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 			char* mbfile = ucs2_to_utf8(fdat.cFileName);
 			if(strcmp(mbfile, ".") && strcmp(mbfile, "..")) {
-				snprintf(d, 65535, "%s/%s", path, mbfile);
+				snprintf(d, 32767, "%s/%s", path, mbfile);
 				k_ftw(d, ftw_fn);
 			}
 			free(mbfile);
 		}
 		else {
 			char* mbfile = ucs2_to_utf8(fdat.cFileName);
-			snprintf(d, 65535, "%s/%s", path, mbfile);
+			snprintf(d, 32767, "%s/%s", path, mbfile);
 			ftw_fn(d, strlen(path)+1);
 		}
 		if (!FindNextFileW(h, &fdat))

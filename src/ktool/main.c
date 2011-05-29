@@ -300,7 +300,7 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 	}
 
 	uint64_t s = k_pres_res_size(&r);
-	uint64_t mmap_window = 16*1024*1024;
+	uint64_t mmap_window = 1*1024*1024;
 	size_t niter = s / mmap_window;
 	size_t nlast = s % mmap_window;
 

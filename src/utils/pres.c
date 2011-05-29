@@ -77,38 +77,37 @@ __export_function int k_pres_add_file
 (struct pres_file_t* pf, const char* name, size_t basename_off)
 {
 	int res = 0, fd = -1;
-	uint8_t* buf = 0;
 	size_t filebytes = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
-	k_hash_t* h = 0;
 	k_prng_t* prng = 0;
+	//uint8_t* buf = 0;
+	uint8_t* buf[2*65536];
 
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
-	h = k_hash_init(pf->hdr.hashfunction, pf->hdr.hashsize);
-	if (!h)
-		goto unrecoverable_err;
-
+#if 0
 	/* reading a rather large chunk at once to make better use
 	 * of encryption parallelization */
-	buf = malloc(16*1024*1024);
+	buf = malloc(1*1024*1024);
 	if (!buf)
 		goto unrecoverable_err;
+#endif
 
-	prng = k_prng_init(PRNG_PLATFORM);
-	if (!prng)
-		goto unrecoverable_err;
+	if (pf->scipher) {
+		prng = k_prng_init(PRNG_PLATFORM);
+		if (!prng)
+			goto unrecoverable_err;
 
-	memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
-	k_prng_update(prng, data_nonce, pf->nonce_size);
-
+		memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
+		k_prng_update(prng, data_nonce, pf->nonce_size);
+	}
 	#ifdef __WINNT__
 	wchar_t* wc = utf8_to_ucs2(name);
 	if (!wc)
 		fd = -1;
 	else {
-		fd = _wopen(wc, O_RDWR|_O_BINARY);
+		fd = _wopen(wc, O_RDONLY|_O_BINARY);
 		free(wc);
 	}
 	#else
@@ -160,13 +159,13 @@ __export_function int k_pres_add_file
 	pf->rtbl = temp;
 	memset(&pf->rtbl->table[pf->cur_resentries], 0, sz_res_tbl_entry);
 
-	k_hash_reset(h);
+	k_hash_reset(pf->hash);
 	if (pf->scipher)
 		k_sc_set_nonce(pf->scipher, data_nonce);
 	ssize_t nread;
-	while ((nread = read(fd, buf, 16*1024*1024)) > 0) {
+	while ((nread = read(fd, buf, 2*65536)) > 0) {
 		ssize_t nwritten, total = 0;
-		k_hash_update(h, buf, nread);
+		k_hash_update(pf->hash, buf, nread);
 		if (pf->scipher)
 			k_sc_update(pf->scipher, buf, buf, nread);
 		while (total != nread) {
@@ -190,12 +189,12 @@ __export_function int k_pres_add_file
 #endif
 	pf->cur_resentries++;
 
-	k_hash_final(h,
+	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].data_digest);
 
-	k_hash_reset(h);
-	k_hash_update(h, name, namelen);
-	k_hash_final(h,
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, name, namelen);
+	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].filename_digest);
 
 	pf->rtbl->table[pf->cur_resentries-1].id = pf->cur_resentries;
@@ -232,10 +231,10 @@ recoverable_err:
 out:
 	if (fd != -1)
 		close(fd);
-	if (h)
-		k_hash_finish(h);
+#if 0
 	if (buf)
 		free(buf);
+#endif
 	if (prng)
 		k_prng_finish(prng);
 	return res;
@@ -766,6 +765,7 @@ static int _set_file_header
 	pf->hdr.magic = PRES_MAGIC;
 	pf->hdr.version = PRES_VER;
 	pf->hdr.hashfunction = opt->hashsum;
+	pf->hdr.hashsize = k_hash_digest_size(pf->hash);
 	if (opt->streamcipher)
 		pf->hdr.cipher = opt->streamcipher;
 	else if (opt->blockcipher) {
@@ -783,14 +783,9 @@ static int _set_file_header
 	pf->cur_stringpoolstart = sz_detached_hdr + sz_file_header;
 	pf->cur_filesize = sz_file_header + sz_detached_hdr + sz_res_tbl;
 
-	k_hash_t* h = k_hash_init(opt->hashsum, opt->hashsize);
-	if (!h)
-		return -1;
-
-	pf->hdr.hashsize = k_hash_digest_size(h);
 	if (!pf->hdr.hashsize)
 		return -1;
-	k_hash_finish(h);
+
 	return 0;
 }
 
@@ -799,6 +794,10 @@ __export_function int k_pres_create
 {
 	k_prng_t* prng = 0;
 	memset(pf, 0, sizeof(struct pres_file_t));
+
+	pf->hash = k_hash_init(opt->hashsum, opt->hashsize);
+	if (!pf->hash)
+		goto err_out;
 
 	if (_set_file_header(pf, opt))
 		goto err_out;
@@ -849,6 +848,8 @@ __export_function int k_pres_create
 	return 0;
 
 err_out:
+	if (pf->hash)
+		k_hash_finish(pf->hash);
 	if (pf->stringpool.alloced)
 		pool_free(&pf->stringpool);
 	if (prng)
@@ -869,26 +870,23 @@ static int _commit_and_close(struct pres_file_t* pf)
 	uint8_t spool_nonce[PRES_MAX_IV_LENGTH];
 	size_t s;
 	int res = 0;
-	k_hash_t* h = 0;
 	k_prng_t* prng = 0;
 
 	if (pf->is_corrupt)
 		goto err_out;
 
-	h = k_hash_init(pf->hdr.hashfunction, pf->hdr.hashsize);
-	if (!h)
-		goto err_out;
+	if (pf->scipher) {
+		prng = k_prng_init(PRNG_PLATFORM);
+		if (!prng)
+			goto err_out;
 
-	prng = k_prng_init(PRNG_PLATFORM);
-	if (!prng)
-		goto err_out;
-
-	memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
-	memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
-	memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);
-	k_prng_update(prng, dhdr_nonce, pf->nonce_size);
-	k_prng_update(prng, rtbl_nonce, pf->nonce_size);
-	k_prng_update(prng, spool_nonce, pf->nonce_size);
+		memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
+		memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
+		memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);
+		k_prng_update(prng, dhdr_nonce, pf->nonce_size);
+		k_prng_update(prng, rtbl_nonce, pf->nonce_size);
+		k_prng_update(prng, spool_nonce, pf->nonce_size);
+	}
 
 	pf->hdr.filesize = pf->cur_filesize;
 	pf->dhdr.resource_table_start = pf->cur_rtbl_start;
@@ -904,18 +902,18 @@ static int _commit_and_close(struct pres_file_t* pf)
 		memcpy(pf->rtbl->string_pool_iv, spool_nonce, pf->nonce_size);
 	}
 
-	k_hash_reset(h);
-	k_hash_update(h, &pf->hdr, sz_header_digest);
-	k_hash_final(h, pf->hdr.digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
+	k_hash_final(pf->hash, pf->hdr.digest);
 	if (lseek(pf->fd, 0, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_file_header;
 	if (write(pf->fd, &pf->hdr, s) != s)
 		goto err_out;
 
-	k_hash_reset(h);
-	k_hash_update(h, &pf->dhdr, sz_dheader_digest);
-	k_hash_final(h, pf->dhdr.digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
+	k_hash_final(pf->hash, pf->dhdr.digest);
 
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
 		goto err_out;
@@ -933,14 +931,14 @@ static int _commit_and_close(struct pres_file_t* pf)
 	if (write(pf->fd, pf->stringpool.base, s) != s)
 		goto err_out;
 
-	k_hash_reset(h);
-	k_hash_update(h, pf->rtbl, sz_rtbl_digest);
-	k_hash_final(h, pf->rtbl->digest);
+	k_hash_reset(pf->hash);
+	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
+	k_hash_final(pf->hash, pf->rtbl->digest);
 	for (size_t i = 0; i < pf->rtbl->entries; ++i) {
-		k_hash_reset(h);
-		k_hash_update(h, &pf->rtbl->table[i],
+		k_hash_reset(pf->hash);
+		k_hash_update(pf->hash, &pf->rtbl->table[i],
 			sz_rtblentry_digest);
-		k_hash_final(h, pf->rtbl->table[i].digest);
+		k_hash_final(pf->hash, pf->rtbl->table[i].digest);
 	}
 
 	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1)
@@ -958,8 +956,8 @@ err_out:
 	k_trollback_and_close(pf->fd);
 	res = -1;
 out:
-	if (h)
-		k_hash_finish(h);
+	if (pf->hash)
+		k_hash_finish(pf->hash);
 	if (prng)
 		k_prng_finish(prng);
 	if (pf->scipher)

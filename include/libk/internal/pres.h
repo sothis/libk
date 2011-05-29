@@ -129,6 +129,7 @@ struct pres_file_t {
 	int				is_writable;
 	int				is_open;
 	int				is_corrupt;
+	k_hash_t*			hash;
 	k_sc_t*				scipher;
 	uint32_t			nonce_size;
 	uint64_t			cur_filesize;

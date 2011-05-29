@@ -52,7 +52,7 @@ static int pool_resize(struct mempool_t* p, size_t s)
 int pool_alloc(struct mempool_t* p, size_t page_size)
 {
 	memset(p, 0, sizeof(struct mempool_t));
-	p->page_size = page_size ? page_size : 4096;
+	p->page_size = page_size ? page_size : 2*1024*1024;
 	int res = pthread_mutex_init(&p->lock, 0);
 	if (!res)
 		p->alloced = 1;
