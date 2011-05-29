@@ -30,6 +30,7 @@
 #ifndef __WINNT__
 static void __term_handler(int sig, siginfo_t* info, void* unused)
 {
+	printf("\n");
 	exit(0);
 }
 #endif
@@ -177,14 +178,14 @@ static int export_all(const char* filename, const char* dir)
 
 	uint64_t e = k_pres_res_count(&_cur_pres);
 	printf("exporting %lu items from '%s' ...\n", (long)e, filename);
-next:
+
 	for (uint64_t i = 1; i <= e; ++i) {
 		const char* name = k_pres_res_name_by_id(&_cur_pres, i, 0);
 
 		if (k_tcreate_dirs(name)) {
 			printf("resource %lu: '%s'\n", (long)i, name);
 			perror("k_tcreate_dirs");
-			goto next;
+			continue;
 		}
 
 		struct pres_res_t r;
@@ -194,7 +195,7 @@ next:
 		if (fd == -1) {
 			printf("resource %lu: '%s'\n", (long)i, name);
 			perror("k_tcreat");
-			goto next;
+			continue;
 		}
 
 		uint64_t s = k_pres_res_size(&r);
@@ -215,7 +216,7 @@ next:
 					perror("write");
 					k_pres_res_unmap(&r);
 					k_trollback_and_close(fd);
-					goto next;
+					continue;
 				}
 				total += nwritten;
 			}
@@ -232,7 +233,7 @@ next:
 					perror("write");
 					k_pres_res_unmap(&r);
 					k_trollback_and_close(fd);
-					goto next;
+					continue;
 				}
 				total += nwritten;
 			}
@@ -241,7 +242,7 @@ next:
 		if (k_tcommit_and_close(fd)) {
 			printf("resource %lu: '%s'\n", (long)i, name);
 			perror("k_tcommit_and_close");
-			goto next;
+			continue;
 		}
 
 	}
