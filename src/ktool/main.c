@@ -284,21 +284,16 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 	}
 
 	const char* basename;
-	const char* name;
-	name = k_pres_res_name_by_id(&_cur_pres, id, &basename);
+	k_pres_res_name_by_id(&_cur_pres, id, &basename);
 
-	if (k_tcreate_dirs(name)) {
-		printf("resource: '%s'\n", name);
-		perror("k_tcreate_dirs");
-		exit(1);
-	}
+	printf("exporting resource %lu: '%s'\n", (long)id, basename);
 
 	struct pres_res_t r;
 	k_pres_res_by_id(&_cur_pres, &r, id);
 
-	int fd = k_tcreat(name, 0400);
+	int fd = k_tcreat(basename, 0400);
 	if (fd == -1) {
-		printf("resource %lu: '%s'\n", (long)id, name);
+		printf("resource %lu: '%s'\n", (long)id, basename);
 		perror("k_tcreat");
 		exit(1);
 	}
@@ -345,7 +340,7 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 	}
 
 	if (k_tcommit_and_close(fd)) {
-		printf("resource %lu: '%s'\n", (long)id, name);
+		printf("resource %lu: '%s'\n", (long)id, basename);
 		perror("k_tcommit_and_close");
 		return -1;
 	}
