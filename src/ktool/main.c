@@ -399,19 +399,21 @@ static int list_all(const char* filename)
 static void print_help(void)
 {
 	k_version_print();
-	fprintf(stderr, " ktool test                    " \
+	fprintf(stderr, " ktool test                          " \
 		"- run unittests\n");
-	fprintf(stderr, " ktool ls   <infile>           " \
+	fprintf(stderr, " ktool ls   <infile>                 " \
 		"- list contents of pres container\n");
-	fprintf(stderr, " ktool imp  <indir> <outfile>  " \
+	fprintf(stderr, " ktool imp  <indir> <outfile>        " \
 		"- import directory into pres container\n");
-	fprintf(stderr, " ktool imps <indir> <outfile>  " \
-		"- import directory into encrypted pres container\n");
-	fprintf(stderr, " ktool exp  <infile> <outdir>  " \
+	fprintf(stderr, " ktool imps <indir> <outfile>        " \
+		"- import directory into encrypted pres\n");
+	fprintf(stderr, " ktool exp  <infile> <outdir>        " \
 		"- export everything from pres container\n");
-	fprintf(stderr, " ktool version                 " \
+	fprintf(stderr, " ktool expid  <infile> <outdir> <id> " \
+		"- export specific id from pres container\n");
+	fprintf(stderr, " ktool version                       " \
 		"- print version information\n");
-	fprintf(stderr, " ktool help                    " \
+	fprintf(stderr, " ktool help                          " \
 		"- print this\n");
 }
 
