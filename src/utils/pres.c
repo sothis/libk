@@ -294,11 +294,9 @@ failed:
 
 static int _verify_file_header(struct pres_file_t* pf)
 {
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 	enum k_error_e err = K_ESUCCESS;
 	struct stat st;
-	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-	k_hash_t* hash = 0;
-	int res = 0;
 	int digest_bits = pf->hdr.hashsize;
 	int hashfn = pf->hdr.hashfunction;
 	size_t digest_bytes = (digest_bits + 7) / 8;
@@ -317,12 +315,13 @@ static int _verify_file_header(struct pres_file_t* pf)
 	if (!digest_bytes || digest_bytes > PRES_MAX_DIGEST_LENGTH)
 		goto invalid;
 
-	hash = k_hash_init(hashfn, digest_bits);
-	if (!hash)
+	pf->hash = k_hash_init(hashfn, digest_bits);
+	if (!pf->hash)
 		goto invalid;
+
 	memset(digest_chk, 0, digest_bytes);
-	k_hash_update(hash, &pf->hdr, sz_header_digest);
-	k_hash_final(hash, digest_chk);
+	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
+	k_hash_final(pf->hash, digest_chk);
 	if (memcmp(pf->hdr.digest, digest_chk, digest_bytes)) {
 		err = K_EWRONGDIGEST_FHDR;
 		goto invalid;
@@ -348,17 +347,11 @@ static int _verify_file_header(struct pres_file_t* pf)
 	if (dhdr_end > pf->hdr.filesize)
 		goto invalid;
 
-	goto valid;
+	return 0;
 
 invalid:
-	if (hash)
-		k_hash_finish(hash);
 	k_error(err);
 	return -1;
-valid:
-	if (hash)
-		k_hash_finish(hash);
-	return res;
 }
 
 static int _get_file_header(struct pres_file_t* pf)
@@ -700,6 +693,8 @@ static int _pres_open_key
 	pf->is_open = 1;
 	return 0;
 failed:
+	if (pf->hash)
+		k_hash_finish(pf->hash);
 	if (pf->iobuf)
 		free(pf->iobuf);
 	if (pf->scipher)
@@ -722,6 +717,8 @@ __export_function int k_pres_needs_pass(const char* name)
 		return -1;
 	}
 	close(pf.fd);
+	if (pf.hash)
+		k_hash_finish(pf.hash);
 
 	if (pf.hdr.cipher)
 		return 1;
@@ -743,6 +740,8 @@ __export_function int k_pres_open
 		return -1;
 	}
 	close(pf->fd);
+	if (pf->hash)
+		k_hash_finish(pf->hash);
 
 	if (pass)
 		key = _k_key_derive_simple1024(pass,
@@ -1086,20 +1085,32 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 		return -1;
 	if (pf->is_writable)
 		return _commit_and_close(pf);
-	if (pf->scipher)
-		k_sc_finish(pf->scipher);
-	close(pf->fd);
-	pool_free(&pf->stringpool);
-	free(pf->rtbl);
-	memset(pf, 0, sizeof(struct pres_file_t));
-	return 0;
+	else {
+		close(pf->fd);
+		if (pf->hash)
+			k_hash_finish(pf->hash);
+		if (pf->scipher)
+			k_sc_finish(pf->scipher);
+		if (pf->stringpool.alloced)
+			pool_free(&pf->stringpool);
+		if (pf->rtbl)
+			free(pf->rtbl);
+		if (pf->iobuf)
+			free(pf->iobuf);
+		memset(pf, 0, sizeof(struct pres_file_t));
+		return 0;
+	}
 }
 
 __export_function int k_pres_export_id
 (struct pres_file_t* pf, uint64_t id, uint32_t keep_dir_structure)
 {
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
 	const char* basename;
 	const char* name;
+	int digest_bits = pf->hdr.hashsize;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+
 	name = k_pres_res_name_by_id(pf, id, &basename);
 
 	if (keep_dir_structure && k_tcreate_dirs(name)) {
@@ -1119,20 +1130,24 @@ __export_function int k_pres_export_id
 	}
 
 	uint64_t s = k_pres_res_size(&r);
-	uint64_t mmap_window = 8*1024*1024;
+	uint64_t mmap_window = PRES_IOBUF_SIZE;
 	size_t niter = s / mmap_window;
 	size_t nlast = s % mmap_window;
 
+	k_hash_reset(pf->hash);
 	for (uint64_t i = 0; i < niter; ++i) {
 		void* m = k_pres_res_map(&r, mmap_window,
 			i*mmap_window);
 		size_t total = 0;
 		ssize_t nwritten;
+		k_hash_update(pf->hash, m, mmap_window);
 		while (total != mmap_window) {
 			nwritten = write(fd, m + total,
 				mmap_window - total);
 			if (nwritten < 0) {
-				perror("write");
+				fprintf(stderr, "resource %lu: '%s' ->",
+					(long)id, name);
+				perror(" write");
 				k_pres_res_unmap(&r);
 				k_trollback_and_close(fd);
 				return -1;
@@ -1146,10 +1161,13 @@ __export_function int k_pres_export_id
 			niter*mmap_window);
 		size_t total = 0;
 		ssize_t nwritten;
+		k_hash_update(pf->hash, m, nlast);
 		while (total != nlast) {
 			nwritten = write(fd, m + total, nlast - total);
 			if (nwritten < 0) {
-				perror("write");
+				fprintf(stderr, "resource %lu: '%s' ->",
+					(long)id, name);
+				perror(" write");
 				k_pres_res_unmap(&r);
 				k_trollback_and_close(fd);
 				return -1;
@@ -1157,6 +1175,15 @@ __export_function int k_pres_export_id
 			total += nwritten;
 		}
 		k_pres_res_unmap(&r);
+	}
+
+	k_hash_final(pf->hash, digest_chk);
+	if (memcmp(pf->rtbl->table[id-1].data_digest, digest_chk,
+	digest_bytes)) {
+		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "data digest does not match\n");
+		k_trollback_and_close(fd);
+		return -1;
 	}
 
 	if (k_tcommit_and_close(fd)) {
