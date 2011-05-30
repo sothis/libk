@@ -23,7 +23,8 @@
 #define PRES_MAX_DIGEST_LENGTH	128
 #define PRES_MAX_IV_LENGTH	128
 #define PRES_MAX_SIG_LENGTH	32768
-#define PRES_IOBUF_SIZE		4*1024*1024
+#define PRES_IOBUF_SIZE		1*1024*1024
+
 
 /*
  * _start pointers are absolute offsets from file start

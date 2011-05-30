@@ -1018,6 +1018,8 @@ __export_function void* k_pres_res_map
 			break;
 	}
 	if (nread < 0) {
+		free(res->map.mem);
+		res->map.mem = 0;
 		return 0;
 	}
 #endif
@@ -1035,7 +1037,10 @@ __export_function void k_pres_res_unmap
 #if 0
 	pres_unmap(&res->map);
 #else
-	free(res->map.mem);
+	if(res->map.mem) {
+		free(res->map.mem);
+		res->map.mem = 0;
+	}
 #endif
 }
 
