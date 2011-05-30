@@ -16,7 +16,6 @@
 #include "skein.h"
 #include "utils/endian-neutral.h"
 
-
 #define SKEIN_VERSION		1ull
 #define SKEIN_ID_STRING		0x33414853ull
 #define SKEIN_FLAG_FIRST	(1ull << 62)
@@ -27,11 +26,14 @@
 
 
 static void
-skein_compression(struct skein_t* ctx, const void* blockstart, size_t n)
+skein_compression
+(struct skein_t* ctx, const void* blockstart, size_t n, uint64_t bytes_add)
 {
 	do {
 		k_bc_set_encrypt_key(ctx->cipher, ctx->state,
 			ctx->state_bytes*8);
+		_put_uint64_l(ctx->tweak,
+			_get_uint64_l(ctx->tweak) + bytes_add);
 		k_bc_set_tweak(ctx->cipher, ctx->tweak, 16);
 		k_bc_encrypt(ctx->cipher, blockstart, ctx->state);
 		feed_forward64(blockstart, ctx->state, ctx->state_bytes/8);
@@ -77,10 +79,9 @@ void skein_init(
 	_put_uint64_l(cfg_block+8, (uint64_t)hash_outputsize);
 
 	flags = SKEIN_FLAG_FIRST | SKEIN_CFG | SKEIN_FLAG_FINAL;
-	_put_uint64_l(ctx->tweak, (uint64_t)32);
 	_put_uint64_l(ctx->tweak+8, flags);
 	ctx->partial_count = 0;
-	skein_compression(ctx, cfg_block, 1);
+	skein_compression(ctx, cfg_block, 1, 32);
 
 	flags = SKEIN_FLAG_FIRST | SKEIN_MSG;
 	ctx->tweak[0] = 0;
@@ -105,16 +106,13 @@ void skein_update(
 				message += n;
 				ctx->partial_count += n;
 			}
-			_put_uint64_l(ctx->tweak,
-				_get_uint64_l(ctx->tweak) + ctx->state_bytes);
-			skein_compression(ctx, ctx->partial.partial8, 1);
+			skein_compression(ctx, ctx->partial.partial8, 1,
+				ctx->state_bytes);
 			ctx->partial_count = 0;
 		}
 		if (message_size > ctx->state_bytes) {
 			n = (message_size-1) / ctx->state_bytes;
-			_put_uint64_l(ctx->tweak,
-				_get_uint64_l(ctx->tweak) + ctx->state_bytes);
-			skein_compression(ctx, message, n);
+			skein_compression(ctx, message, n, ctx->state_bytes);
 			message_size -= n * ctx->state_bytes;
 			message += n * ctx->state_bytes;
 		}
@@ -140,9 +138,7 @@ void skein_final(
 		memset(ctx->partial.partial8 + ctx->partial_count, 0,
 			ctx->state_bytes - ctx->partial_count);
 	}
-	_put_uint64_l(ctx->tweak,
-		_get_uint64_l(ctx->tweak) + ctx->partial_count);
-	skein_compression(ctx, ctx->partial.partial8, 1);
+	skein_compression(ctx, ctx->partial.partial8, 1, ctx->partial_count);
 	digestsize = (ctx->outputsize + 7) / 8;
 	memset(ctx->partial.partial8, 0, ctx->state_bytes);
 	ctx->partial_count = 0;
@@ -150,10 +146,11 @@ void skein_final(
 	flags = SKEIN_FLAG_FIRST | SKEIN_OUT | SKEIN_FLAG_FINAL;
 
 	for (i = 0; i * ctx->state_bytes < digestsize; i++) {
-		_put_uint64_l(ctx->tweak, (uint64_t)sizeof(uint64_t));
+		ctx->tweak[0] = 0;
 		_put_uint64_l(ctx->tweak+8, flags);
 		_put_uint64_l(ctx->partial.partial64, i);
-		skein_compression(ctx, ctx->partial.partial8, 1);
+		skein_compression(ctx, ctx->partial.partial8, 1,
+			sizeof(uint64_t));
 		remaining = digestsize - i * ctx->state_bytes;
 		if (remaining >= ctx->state_bytes)
 			remaining = ctx->state_bytes;

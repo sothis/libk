@@ -293,6 +293,25 @@ unittest(skein256, "Skein 256")
 	if (memcmp(_out, digest_skein256_384_64, 384/8))
 		goto err_out;
 
+	skein256_init(&c, 384);
+	skein256_update(&c, _message, 32, 384);
+	skein256_update(&c, _message+32, 32, 384);
+	skein256_final(&c, _out, 384);
+	if (memcmp(_out, digest_skein256_384_64, 384/8))
+		goto err_out;
+	skein256_init(&c, 384);
+	skein256_update(&c, _message, 13, 384);
+	skein256_update(&c, _message+13, 51, 384);
+	skein256_final(&c, _out, 384);
+	if (memcmp(_out, digest_skein256_384_64, 384/8))
+		goto err_out;
+	skein256_init(&c, 384);
+	skein256_update(&c, _message, 43, 384);
+	skein256_update(&c, _message+43, 21, 384);
+	skein256_final(&c, _out, 384);
+	if (memcmp(_out, digest_skein256_384_64, 384/8))
+		goto err_out;
+
 	skein256_finish(&c);
 	return 0;
 err_out:
