@@ -97,6 +97,7 @@ __export_function void k_hash_update
 __export_function void k_hash_final
 (struct k_hash_t* c, void* output)
 {
+	memset(output, 0, (c->output_bits + 7) / 8);
 	c->hash->final(c->context, output, c->output_bits);
 }
 

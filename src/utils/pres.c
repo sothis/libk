@@ -320,7 +320,6 @@ static int _verify_file_header(struct pres_file_t* pf)
 	if (!pf->hash)
 		goto invalid;
 
-	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
 	k_hash_final(pf->hash, digest_chk);
 	if (memcmp(pf->hdr.digest, digest_chk, digest_bytes)) {
@@ -376,7 +375,6 @@ static int _verify_detached_header(struct pres_file_t* pf)
 	size_t digest_bytes = (pf->hdr.hashsize + 7) / 8;
 
 	k_hash_reset(pf->hash);
-	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
 	k_hash_final(pf->hash, digest_chk);
 	if (memcmp(pf->dhdr.digest, digest_chk, digest_bytes)) {
@@ -427,7 +425,6 @@ static int _verify_rtbl_entries(struct pres_file_t* pf)
 	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
 		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
 		k_hash_reset(pf->hash);
-		memset(digest_chk, 0, digest_bytes);
 		k_hash_update(pf->hash, e, sz_rtblentry_digest);
 		k_hash_final(pf->hash, digest_chk);
 		if (memcmp(e->digest, digest_chk, digest_bytes))
@@ -497,7 +494,6 @@ static int _verify_rtbl(struct pres_file_t* pf)
 		goto invalid;
 
 	k_hash_reset(pf->hash);
-	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(hash, pf->rtbl, sz_rtbl_digest);
 	k_hash_final(hash, digest_chk);
 	if (memcmp(pf->rtbl->digest, digest_chk, digest_bytes))
@@ -580,7 +576,6 @@ static int _verify_stringpool(struct pres_file_t* pf)
 			goto invalid;
 
 		k_hash_reset(pf->hash);
-		memset(digest_chk, 0, digest_bytes);
 		k_hash_update(pf->hash, fn, fns);
 		k_hash_final(pf->hash, digest_chk);
 		if (memcmp(e->filename_digest, digest_chk, digest_bytes))
