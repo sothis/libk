@@ -1094,3 +1094,85 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 	memset(pf, 0, sizeof(struct pres_file_t));
 	return 0;
 }
+
+__export_function int k_pres_export_id
+(struct pres_file_t* pf, uint64_t id, uint32_t keep_dir_structure)
+{
+	const char* basename;
+	const char* name;
+	name = k_pres_res_name_by_id(pf, id, &basename);
+
+	if (keep_dir_structure && k_tcreate_dirs(name)) {
+		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		perror(" k_tcreate_dirs");
+		return -1;
+	}
+
+	struct pres_res_t r;
+	k_pres_res_by_id(pf, &r, id);
+
+	int fd = k_tcreat(keep_dir_structure ? name : basename, 0400);
+	if (fd == -1) {
+		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		perror(" k_tcreat");
+		return -1;
+	}
+
+	uint64_t s = k_pres_res_size(&r);
+	uint64_t mmap_window = 8*1024*1024;
+	size_t niter = s / mmap_window;
+	size_t nlast = s % mmap_window;
+
+	for (uint64_t i = 0; i < niter; ++i) {
+		void* m = k_pres_res_map(&r, mmap_window,
+			i*mmap_window);
+		size_t total = 0;
+		ssize_t nwritten;
+		while (total != mmap_window) {
+			nwritten = write(fd, m + total,
+				mmap_window - total);
+			if (nwritten < 0) {
+				perror("write");
+				k_pres_res_unmap(&r);
+				k_trollback_and_close(fd);
+				return -1;
+			}
+			total += nwritten;
+		}
+		k_pres_res_unmap(&r);
+	}
+	if (nlast) {
+		void* m = k_pres_res_map(&r, nlast,
+			niter*mmap_window);
+		size_t total = 0;
+		ssize_t nwritten;
+		while (total != nlast) {
+			nwritten = write(fd, m + total, nlast - total);
+			if (nwritten < 0) {
+				perror("write");
+				k_pres_res_unmap(&r);
+				k_trollback_and_close(fd);
+				return -1;
+			}
+			total += nwritten;
+		}
+		k_pres_res_unmap(&r);
+	}
+
+	if (k_tcommit_and_close(fd)) {
+		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		perror(" k_tcommit_and_close");
+		return -1;
+	}
+
+	return 0;
+}
+
+__export_function void k_pres_export_all(struct pres_file_t* pf)
+{
+	uint64_t e = k_pres_res_count(pf);
+
+	for (uint64_t i = 1; i <= e; ++i) {
+		k_pres_export_id(pf, i, 1);
+	}
+}
