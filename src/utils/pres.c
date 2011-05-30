@@ -1145,8 +1145,10 @@ __export_function int k_pres_export_id
 		dumphx("expected", pf->rtbl->table[id-1].data_digest,
 		digest_bytes);
 		dumphx("have", digest_chk, digest_bytes);
+#if DIGEST_MISMATCH_IS_ERROR
 		k_trollback_and_close(fd);
 		return -1;
+#endif
 	}
 
 	if (k_tcommit_and_close(fd)) {
