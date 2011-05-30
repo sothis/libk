@@ -233,7 +233,7 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 		goto err_out;
 
 	k_pres_res_name_by_id(p, id, &basename);
-	printf("exporting %lu:\t'%s'\n", id, basename);
+	printf("exporting %lu:\t'%s'\n", (long)id, basename);
 
 	if (k_pres_export_id(p, id, 0))
 		goto err_out;
