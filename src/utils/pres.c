@@ -371,21 +371,14 @@ static int _get_file_header(struct pres_file_t* pf)
 
 static int _verify_detached_header(struct pres_file_t* pf)
 {
-	enum k_error_e err = K_ESUCCESS;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-	k_hash_t* hash = 0;
-	int res = 0;
-	int digest_bits = pf->hdr.hashsize;
-	int hashfn = pf->hdr.hashfunction;
-	size_t digest_bytes = (digest_bits + 7) / 8;
+	enum k_error_e err = K_ESUCCESS;
+	size_t digest_bytes = (pf->hdr.hashsize + 7) / 8;
 
-	hash = k_hash_init(hashfn, digest_bits);
-	if (!hash)
-		goto invalid;
-
+	k_hash_reset(pf->hash);
 	memset(digest_chk, 0, digest_bytes);
-	k_hash_update(hash, &pf->dhdr, sz_dheader_digest);
-	k_hash_final(hash, digest_chk);
+	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
+	k_hash_final(pf->hash, digest_chk);
 	if (memcmp(pf->dhdr.digest, digest_chk, digest_bytes)) {
 		err = K_EWRONGDIGEST_DHDR;
 		goto invalid;
@@ -399,17 +392,11 @@ static int _verify_detached_header(struct pres_file_t* pf)
 	if (rtbl_end > pf->hdr.filesize)
 		goto invalid;
 
-	goto valid;
+	return 0;
 
 invalid:
-	if (hash)
-		k_hash_finish(hash);
 	k_error(err);
 	return -1;
-valid:
-	if (hash)
-		k_hash_finish(hash);
-	return res;
 }
 
 static int _get_detached_header(struct pres_file_t* pf)
@@ -432,25 +419,17 @@ static int _get_detached_header(struct pres_file_t* pf)
 
 static int _verify_rtbl_entries(struct pres_file_t* pf)
 {
-	int res = 0;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-	k_hash_t* hash = 0;
-	int digest_bits = pf->hdr.hashsize;
-	int hashfn = pf->hdr.hashfunction;
-	size_t digest_bytes = (digest_bits + 7) / 8;
-
-	hash = k_hash_init(hashfn, digest_bits);
-	if (!hash)
-		goto invalid;
+	size_t digest_bytes = (pf->hdr.hashsize + 7) / 8;
 
 	/* TODO: maybe don't make this a hard error. just mark the
 	 * entry as corrupt and try to procceed as far as possible */
 	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
 		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
-		k_hash_reset(hash);
+		k_hash_reset(pf->hash);
 		memset(digest_chk, 0, digest_bytes);
-		k_hash_update(hash, e, sz_rtblentry_digest);
-		k_hash_final(hash, digest_chk);
+		k_hash_update(pf->hash, e, sz_rtblentry_digest);
+		k_hash_final(pf->hash, digest_chk);
 		if (memcmp(e->digest, digest_chk, digest_bytes))
 			goto invalid;
 
@@ -471,13 +450,9 @@ static int _verify_rtbl_entries(struct pres_file_t* pf)
 			goto invalid;
 	}
 
-	goto valid;
+	return 0;
 invalid:
-	res = -1;
-valid:
-	if (hash)
-		k_hash_finish(hash);
-	return res;
+	return -1;
 }
 
 static int _get_rtbl_entries(struct pres_file_t* pf)
@@ -521,6 +496,7 @@ static int _verify_rtbl(struct pres_file_t* pf)
 	if (!hash)
 		goto invalid;
 
+	k_hash_reset(pf->hash);
 	memset(digest_chk, 0, digest_bytes);
 	k_hash_update(hash, pf->rtbl, sz_rtbl_digest);
 	k_hash_final(hash, digest_chk);
@@ -589,16 +565,8 @@ fail:
 
 static int _verify_stringpool(struct pres_file_t* pf)
 {
-	int res = 0;
 	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-	k_hash_t* hash = 0;
-	int digest_bits = pf->hdr.hashsize;
-	int hashfn = pf->hdr.hashfunction;
-	size_t digest_bytes = (digest_bits + 7) / 8;
-
-	hash = k_hash_init(hashfn, digest_bits);
-	if (!hash)
-		goto invalid;
+	size_t digest_bytes = (pf->hdr.hashsize + 7) / 8;
 
 	/* TODO: maybe don't make this a hard error. if the data is valid, we
 	 * still can export it, just the name is lost. */
@@ -611,21 +579,17 @@ static int _verify_stringpool(struct pres_file_t* pf)
 		if (base_off >= fns-1)
 			goto invalid;
 
-		k_hash_reset(hash);
+		k_hash_reset(pf->hash);
 		memset(digest_chk, 0, digest_bytes);
-		k_hash_update(hash, fn, fns);
-		k_hash_final(hash, digest_chk);
+		k_hash_update(pf->hash, fn, fns);
+		k_hash_final(pf->hash, digest_chk);
 		if (memcmp(e->filename_digest, digest_chk, digest_bytes))
 			goto invalid;
 	}
 
-	goto valid;
+	return 0;
 invalid:
-	res = -1;
-valid:
-	if (hash)
-		k_hash_finish(hash);
-	return res;
+	return -1;
 }
 
 static int _get_stringpool(struct pres_file_t* pf)
