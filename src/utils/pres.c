@@ -1162,12 +1162,3 @@ __export_function int k_pres_export_id
 
 	return 0;
 }
-
-__export_function void k_pres_export_all(struct pres_file_t* pf)
-{
-	uint64_t e = k_pres_res_count(pf);
-
-	for (uint64_t i = 1; i <= e; ++i) {
-		k_pres_export_id(pf, i, 1);
-	}
-}

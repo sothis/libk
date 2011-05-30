@@ -76,7 +76,49 @@ static void __init(void)
 #endif
 }
 
-struct pres_file_t _cur_pres;
+static struct pres_file_t* _open_pres_container(const char* filename)
+{
+	struct pres_file_t* p = malloc(sizeof(struct pres_file_t));
+	if (!p)
+		return 0;
+
+	char* pass = 0;
+	int r = k_pres_needs_pass(filename);
+	if (r < 0)
+		goto err_out;
+
+	if (r) {
+		pass = k_get_pass("enter password  : ");
+		if (!pass)
+			goto err_out;
+	}
+
+	if (k_pres_open(p, filename, pass))
+		goto err_out;
+
+	goto out;
+err_out:
+	if (p) {
+		free(p);
+		p = 0;
+	}
+out:
+	if (pass)
+		free(pass);
+	return p;
+}
+
+static int _close_pres_container(struct pres_file_t* p)
+{
+	int res = 0;
+	if (k_pres_close(p))
+		res = -1;
+	free(p);
+	return res;
+}
+
+
+static struct pres_file_t _cur_pres;
 static int
 ft_walk(const char* path, size_t baseoff)
 {
@@ -147,125 +189,87 @@ static int import_directory
 
 static int export_all(const char* filename, const char* dir)
 {
-	char* pass = 0;
-	int r = k_pres_needs_pass(filename);
-	if (r < 0) {
-		perror("k_pres_needs_pass");
-		return -1;
-	}
+	int res = 0;
+	struct pres_file_t* p = _open_pres_container(filename);
 
-	if (r) {
-		pass = k_get_pass("enter password  : ");
-		if (!pass) {
-			perror("k_get_pass");
-			return -1;
-		}
-	}
+	if (!p)
+		goto err_out;
 
-	if (k_pres_open(&_cur_pres, filename, pass)) {
-		perror("k_pres_open");
-		return -1;
-	}
-	if (pass)
-		free(pass);
 
 	mkdir(dir MKDIR_MODE);
-	if (chdir(dir)) {
-		perror("chdir");
-		exit(1);
-	}
+	if (chdir(dir))
+		goto err_out;
 
-	uint64_t e = k_pres_res_count(&_cur_pres);
+	uint64_t e = k_pres_res_count(p);
 	printf("exporting %lu items from '%s' ...\n", (long)e, filename);
 
-	k_pres_export_all(&_cur_pres);
-
-	if (k_pres_close(&_cur_pres)) {
-		perror("k_pres_close");
-		return -1;
+	for (long i = 1; i <= e; ++i) {
+		k_pres_export_id(p, i, 1);
 	}
-	return 0;
+
+	goto out;
+
+err_out:
+	perror("export_all");
+	res = -1;
+out:
+	if (p)
+		_close_pres_container(p);
+	return res;
+
 }
 
 static int exportid(const char* filename, const char* dir, uint64_t id)
 {
-	char* pass = 0;
-	int p = k_pres_needs_pass(filename);
-	if (p < 0) {
-		perror("k_pres_needs_pass");
-		return -1;
-	}
+	const char* basename;
+	int res = 0;
+	struct pres_file_t* p = _open_pres_container(filename);
 
-	if (p) {
-		pass = k_get_pass("enter password  : ");
-		if (!pass) {
-			perror("k_get_pass");
-			return -1;
-		}
-	}
-
-	if (k_pres_open(&_cur_pres, filename, pass)) {
-		perror("k_pres_open");
-		return -1;
-	}
-	if (pass)
-		free(pass);
+	if (!p)
+		goto err_out;
 
 	mkdir(dir MKDIR_MODE);
-	if (chdir(dir)) {
-		perror("chdir");
-		return -1;
-	}
+	if (chdir(dir))
+		goto err_out;
 
-	const char* basename;
-	k_pres_res_name_by_id(&_cur_pres, id, &basename);
+	k_pres_res_name_by_id(p, id, &basename);
 	printf("exporting %lu:\t'%s'\n", id, basename);
 
-	int res = 0;
-	if (k_pres_export_id(&_cur_pres, id, 0))
-		res = -1;
-	if (k_pres_close(&_cur_pres))
-		res = -1;
+	if (k_pres_export_id(p, id, 0))
+		goto err_out;
 
+	goto out;
+err_out:
+	perror("exportid");
+	res = -1;
+out:
+	if (p)
+		_close_pres_container(p);
 	return res;
 }
 
 static int list_all(const char* filename)
 {
-	char* pass = 0;
-	int r = k_pres_needs_pass(filename);
-	if (r < 0) {
-		perror("k_pres_needs_pass");
-		return -1;
-	}
+	int res = 0;
+	struct pres_file_t* p = _open_pres_container(filename);
 
-	if (r) {
-		pass = k_get_pass("enter password  : ");
-		if (!pass) {
-			perror("k_get_pass");
-			return -1;
-		}
-	}
+	if (!p)
+		goto err_out;
 
-	if (k_pres_open(&_cur_pres, filename, pass)) {
-		perror("k_pres_open");
-		return -1;
-	}
-	if (pass)
-		free(pass);
-
-	uint64_t e = k_pres_res_count(&_cur_pres);
-
+	uint64_t e = k_pres_res_count(p);
 	for (long i = 1; i <= e; ++i) {
-		const char* name = k_pres_res_name_by_id(&_cur_pres, i, 0);
+		const char* name = k_pres_res_name_by_id(p, i, 0);
 		printf("%lu:\t'%s'\n", i, name);
 	}
 
-	if (k_pres_close(&_cur_pres)) {
-		perror("k_pres_close");
-		return -1;
-	}
-	return 0;
+	goto out;
+err_out:
+	perror("list_all");
+	res = -1;
+out:
+	if (p)
+		_close_pres_container(p);
+	return res;
 }
 
 static void print_help(void)

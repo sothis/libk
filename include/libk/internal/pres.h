@@ -259,9 +259,6 @@ extern void* k_pres_res_map
 extern void k_pres_res_unmap
 (struct pres_res_t* res);
 
-extern void k_pres_export_all
-(struct pres_file_t* pf);
-
 extern int k_pres_export_id
 (struct pres_file_t* pf, uint64_t id, uint32_t keep_dir_structure);
 
