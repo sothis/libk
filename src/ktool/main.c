@@ -99,7 +99,6 @@ static int import_directory
 	struct pres_options_t o = {
 		.name		= filename,
 		.hashsum 	= HASHSUM_SKEIN_1024,
-		.hashsize	= 1024,
 	};
 
 	if (pass) {

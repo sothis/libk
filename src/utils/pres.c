@@ -11,6 +11,7 @@
 #include <libk/libk.h>
 #include "utils/sections.h"
 #include "utils/err.h"
+#include "utils/dumphx.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -1182,6 +1183,9 @@ __export_function int k_pres_export_id
 	digest_bytes)) {
 		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
 		fprintf(stderr, "data digest does not match\n");
+		dumphx("expected", pf->rtbl->table[id-1].data_digest,
+		digest_bytes);
+		dumphx("have", digest_chk, digest_bytes);
 		k_trollback_and_close(fd);
 		return -1;
 	}
