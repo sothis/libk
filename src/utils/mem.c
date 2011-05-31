@@ -55,7 +55,7 @@ static void _init_mem_properties(void)
 		exit(-1);
 	}
 	_pagesize = sysconf(_SC_PAGESIZE);
-	if (_pagesize == -1) {
+	if (_pagesize == -1 || !_pagesize) {
 		fprintf(stderr, "unable to determine pagesize\n");
 		exit(-1);
 	}

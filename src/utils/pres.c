@@ -697,7 +697,7 @@ __export_function int k_pres_open
 
 	if (pass)
 		key = _k_key_derive_simple1024(pass,
-			pf->hdr.kdf_salt, 3000000);
+			pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
 
 	res = _pres_open_key(pf, name, key);
 	free(key);
@@ -736,6 +736,9 @@ static int _set_file_header
 	if (!pf->hdr.hashsize)
 		return -1;
 
+	strncpy(pf->hdr.libk_version_string, k_version_get(),
+		(sizeof(pf->hdr.libk_version_string)) - 1);
+
 	return 0;
 }
 
@@ -772,7 +775,7 @@ __export_function int k_pres_create
 			k_prng_update(pf->prng, pf->hdr.kdf_salt,
 				PRES_MAX_IV_LENGTH);
 			void* key = _k_key_derive_simple1024(opt->pass,
-				pf->hdr.kdf_salt, 3000000);
+				pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
 			if (!key)
 				goto err_out;
 			pf->scipher = _init_streamcipher(&pf->hdr, key);

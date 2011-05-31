@@ -18,12 +18,13 @@
 
 /* NOTE: _every_ change in the on-disk structures have to result in a
  * version change */
-#define PRES_VER		0x00000001u
+#define PRES_VER		0x00000002u
 #define PRES_MAGIC		0x0701198123421337ull
 #define PRES_MAX_DIGEST_LENGTH	128
 #define PRES_MAX_IV_LENGTH	128
 #define PRES_MAX_SIG_LENGTH	32768
 #define PRES_IOBUF_SIZE		4*1024*1024
+#define PRES_KDF_ITERATIONS	1000000
 
 
 /*
@@ -57,6 +58,8 @@ struct pres_file_header_t {
 	uint32_t	keysize;
 	uint32_t	tweaksize;
 	uint64_t	filesize;
+
+	char		libk_version_string[256];
 
 	uint64_t	detached_header_size;
 	uint64_t	detached_header_start;
