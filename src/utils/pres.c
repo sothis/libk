@@ -80,19 +80,13 @@ __export_function int k_pres_add_file
 	int res = 0, fd = -1;
 	size_t filebytes = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
-	k_prng_t* prng = 0;
 
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
-
 	if (pf->scipher) {
-		prng = k_prng_init(PRNG_PLATFORM);
-		if (!prng)
-			goto unrecoverable_err;
-
 		memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
-		k_prng_update(prng, data_nonce, pf->nonce_size);
+		k_prng_update(pf->prng, data_nonce, pf->nonce_size);
 	}
 	#ifdef __WINNT__
 	wchar_t* wc = utf8_to_ucs2(name);
@@ -229,8 +223,6 @@ recoverable_err:
 out:
 	if (fd != -1)
 		close(fd);
-	if (prng)
-		k_prng_finish(prng);
 	return res;
 }
 
@@ -590,7 +582,7 @@ invalid:
 static int _get_stringpool(struct pres_file_t* pf)
 {
 	struct mmap_t map;
-	if (pool_alloc(&pf->stringpool, pf->rtbl->string_pool_size))
+	if (pool_alloc(&pf->stringpool, PRES_IOBUF_SIZE))
 		return -1;
 
 	if (pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
@@ -750,11 +742,13 @@ static int _set_file_header
 __export_function int k_pres_create
 (struct pres_file_t* pf, struct pres_options_t* opt)
 {
-	k_prng_t* prng = 0;
 	memset(pf, 0, sizeof(struct pres_file_t));
 
 	pf->hash = k_hash_init(opt->hashsum, opt->hashsize);
 	if (!pf->hash)
+		goto err_out;
+	pf->prng = k_prng_init(PRNG_PLATFORM);
+	if (!pf->prng)
 		goto err_out;
 
 	if (_set_file_header(pf, opt))
@@ -775,11 +769,8 @@ __export_function int k_pres_create
 		if (opt->key)
 			pf->scipher = _init_streamcipher(&pf->hdr, opt->key);
 		else {
-			k_prng_t* prng = k_prng_init(PRNG_PLATFORM);
-			if (!prng)
-				goto err_out;
-			k_prng_update(prng,pf->hdr.kdf_salt,PRES_MAX_IV_LENGTH);
-			k_prng_finish(prng);
+			k_prng_update(pf->prng, pf->hdr.kdf_salt,
+				PRES_MAX_IV_LENGTH);
 			void* key = _k_key_derive_simple1024(opt->pass,
 				pf->hdr.kdf_salt, 3000000);
 			if (!key)
@@ -800,7 +791,7 @@ __export_function int k_pres_create
 	if (pf->fd == -1)
 		goto err_out;
 
-	if (pool_alloc(&pf->stringpool, 8*1024*1024))
+	if (pool_alloc(&pf->stringpool, PRES_IOBUF_SIZE))
 		goto err_out;
 
 	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
@@ -817,8 +808,8 @@ err_out:
 		k_hash_finish(pf->hash);
 	if (pf->stringpool.alloced)
 		pool_free(&pf->stringpool);
-	if (prng)
-		k_prng_finish(prng);
+	if (pf->prng)
+		k_prng_finish(pf->prng);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
 	if (pf->fd != -1)
@@ -835,22 +826,17 @@ static int _commit_and_close(struct pres_file_t* pf)
 	uint8_t spool_nonce[PRES_MAX_IV_LENGTH];
 	size_t s;
 	int res = 0;
-	k_prng_t* prng = 0;
 
 	if (pf->is_corrupt)
 		goto err_out;
 
 	if (pf->scipher) {
-		prng = k_prng_init(PRNG_PLATFORM);
-		if (!prng)
-			goto err_out;
-
 		memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
 		memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
 		memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);
-		k_prng_update(prng, dhdr_nonce, pf->nonce_size);
-		k_prng_update(prng, rtbl_nonce, pf->nonce_size);
-		k_prng_update(prng, spool_nonce, pf->nonce_size);
+		k_prng_update(pf->prng, dhdr_nonce, pf->nonce_size);
+		k_prng_update(pf->prng, rtbl_nonce, pf->nonce_size);
+		k_prng_update(pf->prng, spool_nonce, pf->nonce_size);
 	}
 
 	pf->hdr.filesize = pf->cur_filesize;
@@ -923,8 +909,8 @@ err_out:
 out:
 	if (pf->hash)
 		k_hash_finish(pf->hash);
-	if (prng)
-		k_prng_finish(prng);
+	if (pf->prng)
+		k_prng_finish(pf->prng);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
 	if (pf->stringpool.alloced)
@@ -1054,6 +1040,8 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 		close(pf->fd);
 		if (pf->hash)
 			k_hash_finish(pf->hash);
+		if (pf->prng)
+			k_prng_finish(pf->prng);
 		if (pf->scipher)
 			k_sc_finish(pf->scipher);
 		if (pf->stringpool.alloced)

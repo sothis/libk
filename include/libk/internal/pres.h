@@ -23,7 +23,7 @@
 #define PRES_MAX_DIGEST_LENGTH	128
 #define PRES_MAX_IV_LENGTH	128
 #define PRES_MAX_SIG_LENGTH	32768
-#define PRES_IOBUF_SIZE		1*1024*1024
+#define PRES_IOBUF_SIZE		4*1024*1024
 
 
 /*
@@ -132,6 +132,7 @@ struct pres_file_t {
 	int				is_corrupt;
 	k_hash_t*			hash;
 	k_sc_t*				scipher;
+	k_prng_t*			prng;
 	uint32_t			nonce_size;
 	uint64_t			cur_filesize;
 	uint64_t			cur_rtbl_start;
