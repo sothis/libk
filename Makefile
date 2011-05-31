@@ -90,6 +90,7 @@ INCLUDES	+= -I./src
 INCLUDES	+= -I./include
 
 SRC		+= ./src/version.c
+.PHONY: ./src/version.c
 
 SRC		+= ./src/blockcipher/blockcipher.c
 SRC		+= ./src/blockcipher/modes/noop.c
