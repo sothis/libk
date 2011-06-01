@@ -14,13 +14,19 @@
 static const char* const __libk_version_string = VERSION;
 static const char* const __libk_builddate_string = __DATE__;
 static const char* const __libk_buildtime_string = __TIME__;
+#ifdef NDEBUG
+static const int _debug_build = 0;
+#else
+static const int _debug_build = 1;
+#endif
 
 __export_function void k_version_print(void)
 {
-	fprintf(stderr, "libk %s, %s %s\n",
+	fprintf(stderr, "libk %s, %s %s%s\n",
 		__libk_version_string,
 		__libk_builddate_string,
-		__libk_buildtime_string);
+		__libk_buildtime_string,
+		_debug_build ? " (debug build)" : "");
 }
 
 __export_function const char* k_version_get(void)
