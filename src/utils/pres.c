@@ -736,7 +736,7 @@ static int _set_file_header
 	if (!pf->hdr.hashsize)
 		return -1;
 
-	strncpy(pf->hdr.libk_version_string, k_version_get(),
+	strncpy(pf->hdr.libk_version_string, k_version_string(),
 		(sizeof(pf->hdr.libk_version_string)) - 1);
 
 	return 0;

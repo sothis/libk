@@ -274,7 +274,7 @@ out:
 
 static void print_help(void)
 {
-	k_version_print();
+	k_print_version();
 	fprintf(stderr, " ktool test                          " \
 		"- run unittests\n");
 	fprintf(stderr, " ktool ls   <infile>                 " \
@@ -340,7 +340,7 @@ int main(int argc, char* argv[], char* envp[])
 		return failed;
 	}
 	if (!strcmp(argv[1], "version")) {
-		k_version_print();
+		k_print_version();
 		return 0;
 	}
 	if (!strcmp(argv[1], "help")) {

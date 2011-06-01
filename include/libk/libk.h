@@ -35,10 +35,22 @@ extern void k_set_error_handler
 extern int k_run_unittests
 (int verbose);
 
-extern void k_version_print
+extern void k_print_version
 (void);
 
-extern const char* k_version_get
+extern const char* k_version_string
+(void);
+
+extern uint32_t k_version
+(const char** extra, const char** git);
+
+extern uint32_t k_version_major
+(void);
+
+extern uint32_t k_version_minor
+(void);
+
+extern uint32_t k_version_patchlevel
 (void);
 
 extern void* _k_key_derive_simple1024
