@@ -91,7 +91,8 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		k_error(K_ENOMEM);
 		return NULL;
 	}
-	if (k_bcmode_set_mode(c->blockcipher, mode, max_workers)) {
+	if (k_bcmode_set_mode(c->blockcipher, (enum bcmode_e)mode,
+	max_workers)) {
 		k_sc_finish(c);
 		return NULL;
 	}
