@@ -145,8 +145,8 @@ __export_function int32_t k_bcmode_set_mode
 		goto k_bc_set_mode_err;
 	}
 
-	if ((max_workers != -1) && c->mode->encrypt_parallelizable ||
-	c->mode->decrypt_parallelizable) {
+	if ((max_workers != -1) && (c->mode->encrypt_parallelizable ||
+	c->mode->decrypt_parallelizable)) {
 		c->workbench = workbench_create(max_workers);
 		if (!c->workbench) {
 			err = K_ENOMEM;
