@@ -48,7 +48,7 @@ extern size_t k_bc_get_blocksize
 /* high level api using a specific blockcipher mode */
 
 extern int32_t k_bcmode_set_mode
-(k_bc_t* c, enum bcmode_e mode, size_t max_workers);
+(k_bc_t* c, enum bcmode_e mode, int32_t max_workers);
 
 extern int32_t k_bcmode_set_key
 (k_bc_t* c, const void* k, uint32_t bits, enum keytype_e t);

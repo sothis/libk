@@ -133,7 +133,7 @@ k_bcmode_init_err:
 }
 
 __export_function int32_t k_bcmode_set_mode
-(struct k_bc_t* c, enum bcmode_e mode, size_t max_workers)
+(struct k_bc_t* c, enum bcmode_e mode, int32_t max_workers)
 {
 	enum k_error_e err = K_ESUCCESS;
 
@@ -145,7 +145,7 @@ __export_function int32_t k_bcmode_set_mode
 		goto k_bc_set_mode_err;
 	}
 
-	if (c->mode->encrypt_parallelizable ||
+	if ((max_workers != -1) && c->mode->encrypt_parallelizable ||
 	c->mode->decrypt_parallelizable) {
 		c->workbench = workbench_create(max_workers);
 		if (!c->workbench) {

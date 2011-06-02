@@ -58,9 +58,9 @@ namespace nlibk
 
 			/* high level api using a specific blockcipher mode */
 
-			/* int32_t k_bcmode_set_mode(k_bc_t* c, enum bcmode_e mode, size_t max_workers); */
+			/* int32_t k_bcmode_set_mode(k_bc_t* c, enum bcmode_e mode, int32_t max_workers); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-			internal static extern int k_bcmode_set_mode(UIntPtr context, BlockcipherModeKind mode, UIntPtr max_workers);
+			internal static extern int k_bcmode_set_mode(UIntPtr context, BlockcipherModeKind mode, Int32 max_workers);
 
 			/* int32_t k_bcmode_set_key(k_bc_t* c, const void* k, uint32_t bits, enum keytype_e t); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
@@ -130,7 +130,7 @@ namespace nlibk
 
 		public void SetMode(BlockcipherModeKind mode, int max_workers)
 		{
-			if (SafeNativeMethods.k_bcmode_set_mode(context, mode, (UIntPtr)max_workers) != 0)
+			if (SafeNativeMethods.k_bcmode_set_mode(context, mode, max_workers) != 0)
 				UnmanagedError.ThrowLastError();
 		}
 
