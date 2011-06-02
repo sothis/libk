@@ -85,6 +85,9 @@ endif
 ################################################################################
 
 LIBRARIES	+= -lpthread
+ifdef PLAT_WINNT
+LIBRARIES	+= -lwinmm
+endif
 
 INCLUDES	+= -I./src
 INCLUDES	+= -I./include
