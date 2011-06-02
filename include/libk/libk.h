@@ -35,6 +35,9 @@ extern void k_set_error_handler
 extern int k_run_unittests
 (int verbose);
 
+extern void k_run_benchmarks
+(int verbose);
+
 extern void k_print_version
 (void);
 

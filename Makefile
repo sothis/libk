@@ -130,6 +130,11 @@ SRC		+= ./src/utils/unittest.c
 SRC		+= ./src/utils/mempool.c
 SRC		+= ./src/utils/ioutils.c
 
+SRC		+= ./src/utils/benchmark.c
+SRC		+= ./src/bench/bench_aes.c
+SRC		+= ./src/bench/bench_skein.c
+SRC		+= ./src/bench/bench_threefish.c
+
 ifdef PLAT_WINNT
 SRC		+= ./src/utils/ntwrap.c
 endif

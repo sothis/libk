@@ -277,6 +277,8 @@ static void print_help(void)
 	k_print_version();
 	fprintf(stderr, " ktool test                          " \
 		"- run unittests\n");
+	fprintf(stderr, " ktool perf                          " \
+		"- run benchmarks\n");
 	fprintf(stderr, " ktool ls   <infile>                 " \
 		"- list contents of pres container\n");
 	fprintf(stderr, " ktool imp  <indir> <outfile>        " \
@@ -338,6 +340,10 @@ int main(int argc, char* argv[], char* envp[])
 		else
 			printf("passed all unittests\n");
 		return failed;
+	}
+	if (!strcmp(argv[1], "perf")) {
+		k_run_benchmarks(1);
+		return 0;
 	}
 	if (!strcmp(argv[1], "version")) {
 		k_print_version();
