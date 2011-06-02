@@ -121,7 +121,7 @@ __export_function struct k_bc_t* k_bc_init
 		err = K_ENOMEM;
 		goto k_bcmode_init_err;
 	}
-	if (k_bcmode_set_mode(c, BLK_CIPHER_MODE_NOOP, 0))
+	if (k_bcmode_set_mode(c, BLK_CIPHER_MODE_NOOP, -1))
 		goto k_bcmode_init_err;
 
 	return c;
