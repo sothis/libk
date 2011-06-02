@@ -140,7 +140,7 @@ __export_function void k_sc_set_nonce
 	// in order to be able to construct custom cryptosystems
 }
 
-__export_function size_t k_sc_get_nonce_size
+__export_function size_t k_sc_get_nonce_bytes
 (struct k_sc_t* c)
 {
 	if (c->blockcipher)

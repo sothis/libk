@@ -101,8 +101,14 @@ __export_function void k_hash_final
 	c->hash->final(c->context, output, c->output_bits);
 }
 
-__export_function uint32_t k_hash_digest_size
+__export_function uint32_t k_hash_digest_bits
 (struct k_hash_t* c)
 {
 	return c->output_bits;
+}
+
+__export_function size_t k_hash_digest_bytes
+(struct k_hash_t* c)
+{
+	return (c->output_bits + 7) / 8;
 }

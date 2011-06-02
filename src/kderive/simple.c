@@ -22,7 +22,7 @@ __export_function void* _k_key_derive_simple1024
 	if (!h)
 		return 0;
 	size_t sp = strlen(pass);
-	size_t digestbytes = (k_hash_digest_size(h) + 7) / 8;
+	size_t digestbytes = k_hash_digest_bytes(h);
 
 	void* inp = malloc(sp+digestbytes);
 	if (!inp) {

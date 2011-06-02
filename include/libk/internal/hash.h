@@ -31,8 +31,10 @@ extern void k_hash_update
 extern void k_hash_final
 (k_hash_t* c, void* output);
 
-extern uint32_t k_hash_digest_size
+extern uint32_t k_hash_digest_bits
 (k_hash_t* c);
 
+extern size_t k_hash_digest_bytes
+(k_hash_t* c);
 
 #endif /* _KHASH_H */

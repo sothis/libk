@@ -715,7 +715,7 @@ static int _set_file_header
 	pf->hdr.magic = PRES_MAGIC;
 	pf->hdr.version = PRES_VER;
 	pf->hdr.hashfunction = opt->hashsum;
-	pf->hdr.hashsize = k_hash_digest_size(pf->hash);
+	pf->hdr.hashsize = k_hash_digest_bits(pf->hash);
 	if (opt->streamcipher)
 		pf->hdr.cipher = opt->streamcipher;
 	else if (opt->blockcipher) {
@@ -783,7 +783,7 @@ __export_function int k_pres_create
 		}
 		if (!pf->scipher)
 			goto err_out;
-		pf->nonce_size = k_sc_get_nonce_size(pf->scipher);
+		pf->nonce_size = k_sc_get_nonce_bytes(pf->scipher);
 	}
 
 #ifdef NDEBUG
