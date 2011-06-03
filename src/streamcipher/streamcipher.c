@@ -66,38 +66,40 @@ k_sc_init_err:
 __export_function struct k_sc_t* k_sc_init_with_blockcipher
 (enum blockcipher_e cipher, enum bcstreammode_e mode, size_t max_workers)
 {
+	enum k_error_e err = K_ESUCCESS;
 	struct k_sc_t* c = 0;
 
 	c = k_sc_init(STREAM_CIPHER_NOOP);
 	if (!c)
 		return NULL;
 	c->blockcipher = k_bc_init(cipher);
-	if (!c->blockcipher) {
-		k_sc_finish(c);
-		return NULL;
-	}
+	if (!c->blockcipher)
+		goto k_sc_init_err;
+
 	size_t bs = k_bc_get_blocksize(c->blockcipher);
 	/* TODO: lock this memory */
 	c->partial_block = k_calloc(1, bs);
 	if (!c->partial_block) {
-		k_sc_finish(c);
-		k_error(K_ENOMEM);
-		return NULL;
+		err = K_ENOMEM;
+		goto k_sc_init_err;
 	}
 	/* TODO: lock this memory */
 	c->old_iv = k_calloc(1, bs);
 	if (!c->old_iv) {
-		k_sc_finish(c);
-		k_error(K_ENOMEM);
-		return NULL;
+		err = K_ENOMEM;
+		goto k_sc_init_err;
 	}
 	if (k_bcmode_set_mode(c->blockcipher, (enum bcmode_e)mode,
-	max_workers)) {
-		k_sc_finish(c);
-		return NULL;
-	}
+	max_workers))
+		goto k_sc_init_err;
 
 	return c;
+
+k_sc_init_err:
+	k_sc_finish(c);
+	if (err != K_ESUCCESS)
+		k_error(err);
+	return NULL;
 }
 
 __export_function void k_sc_finish
