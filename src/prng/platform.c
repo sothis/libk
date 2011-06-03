@@ -19,14 +19,15 @@
 
 enum platform_characteristics_e {
 	wordsize	= 32,
-	cachesize	= 4096*((wordsize+7)/8),
+	cacheitems	= 4096,
+	cachesize	= cacheitems*((wordsize+7)/8),
 };
 
 struct platform_t {
 	int		fd_random;
 	int		fd_urandom;
 	size_t		cache_fill;
-	uint32_t	cache[4096];
+	uint32_t	cache[cacheitems];
 };
 
 static void platform_setfds(void* state, int fd_random, int fd_urandom)
@@ -40,7 +41,6 @@ static void platform_update(void* state, void* output)
 {
 	uint32_t r = 0;
 #ifdef __WINNT__
-	/* TODO: cache here too */
 	rand_s(&r);
 #else
 	struct platform_t* c = state;
@@ -61,7 +61,7 @@ static void platform_update(void* state, void* output)
 		if (total == cachesize)
 			break;
 	}
-	c->cache_fill = 4095;
+	c->cache_fill = cacheitems-1;
 	r = c->cache[c->cache_fill];
 #endif
 	_put_uint32_l(output, r);
