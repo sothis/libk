@@ -40,7 +40,6 @@ namespace nlibk
 
 	public enum BlockcipherStreamModeKind
 	{
-		CipherFeedback		= BlockcipherModeKind.CipherFeedback,
 		OutputFeedback		= BlockcipherModeKind.OutputFeedback,
 		Counter			= BlockcipherModeKind.Counter,
 	};

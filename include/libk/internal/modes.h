@@ -26,7 +26,6 @@ enum bcmode_e {
  * i.e. no padding is required and decryption uses encrypt transform,
  * add the mode below */
 enum bcstreammode_e {
-	BLK_CIPHER_STREAMMODE_CFB		= BLK_CIPHER_MODE_CFB,
 	BLK_CIPHER_STREAMMODE_OFB		= BLK_CIPHER_MODE_OFB,
 	BLK_CIPHER_STREAMMODE_CTR		= BLK_CIPHER_MODE_CTR,
 };
