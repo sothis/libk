@@ -40,6 +40,7 @@ static void platform_update(void* state, void* output)
 {
 	uint32_t r = 0;
 #ifdef __WINNT__
+	/* TODO: cache here too */
 	rand_s(&r);
 #else
 	struct platform_t* c = state;
