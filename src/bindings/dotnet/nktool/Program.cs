@@ -53,6 +53,7 @@ namespace nktool
 				Console.WriteLine("\tSHA1          : {0:f2} MiB/s", Sha1Test.Bench());
 
 				Console.WriteLine("Pseudorandomnumber Generator Performance Tests");
+				Console.WriteLine("\tPlatform      : {0:f2} MiB/s", PlatformPrngTest.Bench());
 				Console.WriteLine("\tMT19937-32    : {0:f2} MiB/s", Mt19937_32Test.Bench());
 #endif
 			} catch (Exception e) {

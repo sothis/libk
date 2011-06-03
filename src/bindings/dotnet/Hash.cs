@@ -22,23 +22,23 @@ namespace nlibk
 		internal static class SafeNativeMethods
 		{
 			/* k_hash_t* k_hash_init(enum hashsum_e hashsum, uint32_t output_bits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_hash_init(HashKind hashsum, uint output_bits);
 
 			/* void k_hash_finish(k_hash_t* c); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_hash_finish(UIntPtr context);
 
 			/* void k_hash_reset(k_bc_t* c); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_hash_reset(UIntPtr context);
 
 			/* void k_hash_update(k_hash_t* c, const void* input, size_t bytes); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_hash_update(UIntPtr context, [In] byte[] input, UIntPtr bytes);
 
 			/* void k_hash_final(k_hash_t* c, void* output); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_hash_final(UIntPtr context, [Out] byte[] output);
 		}
 

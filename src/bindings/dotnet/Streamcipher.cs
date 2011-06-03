@@ -22,27 +22,27 @@ namespace nlibk
 		internal static class SafeNativeMethods
 		{
 			/* k_sc_t* k_sc_init(enum streamcipher_e cipher); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_sc_init(StreamcipherKind cipher);
 
 			/* k_sc_t* k_sc_init_with_blockcipher(enum blockcipher_e cipher, enum bcstreammode_e mode, size_t max_workers); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_sc_init_with_blockcipher(BlockcipherKind cipher, BlockcipherStreamModeKind mode, UIntPtr max_workers);
 
 			/* void k_sc_finish(k_sc_t* c); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_sc_finish(UIntPtr context);
 
 			/* void k_sc_set_nonce(k_sc_t* c, const void* nonce); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_sc_set_nonce(UIntPtr context, [In] byte[] nonce);
 
 			/* int32_t k_sc_set_key(k_sc_t* c, const void* key, uint32_t keybits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern int k_sc_set_key(UIntPtr context, [In] byte[] key, UInt32 bits);
 
 			/* void k_sc_update(k_sc_t* c, const void* input, void* output, size_t bytes); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_sc_update(UIntPtr context, [In] byte[] input, [Out] byte[] output, UIntPtr bytes);
 		}
 

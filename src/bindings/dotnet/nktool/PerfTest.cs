@@ -55,13 +55,13 @@ namespace nktool
 		public double Run()
 		{
 			PerfWatch t = new PerfWatch();
+			byte[] key = new byte[(keybits + 7) / 8];
+			byte[] input = new byte[megabytes * 1048576];
+			byte[] output = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
 			using (Blockcipher bc = new Blockcipher(cipherkind)) {
-				byte[] key = new byte[(keybits + 7) / 8];
 				byte[] iv = new byte[bc.Blocksize];
-				byte[] input = new byte[megabytes * 1048576];
-				byte[] output = new byte[megabytes * 1048576];
 
 				bc.SetMode(ciphermode);
 				bc.SetKey(keytype, key, keybits);
@@ -86,13 +86,12 @@ namespace nktool
 		public double Run()
 		{
 			PerfWatch t = new PerfWatch();
+			byte[] key = new byte[(keybits + 7) / 8];
+			byte[] input = new byte[megabytes * 1048576];
+			byte[] output = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
 			using (Streamcipher sc = new Streamcipher(cipherkind)) {
-				byte[] key = new byte[(keybits + 7) / 8];
-				byte[] input = new byte[megabytes * 1048576];
-				byte[] output = new byte[megabytes * 1048576];
-
 				sc.SetKey(key, keybits);
 				sc.Update(input, output);
 				GC.Collect();
@@ -115,13 +114,12 @@ namespace nktool
 		public double Run()
 		{
 			PerfWatch t = new PerfWatch();
+			byte[] key = new byte[(keybits + 7) / 8];
+			byte[] input = new byte[megabytes * 1048576];
+			byte[] output = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
 			using (Streamcipher sc = new Streamcipher(cipherkind, streammode)) {
-				byte[] key = new byte[(keybits + 7) / 8];
-				byte[] input = new byte[megabytes * 1048576];
-				byte[] output = new byte[megabytes * 1048576];
-
 				sc.SetKey(key, keybits);
 				sc.Update(input, output);
 				GC.Collect();
@@ -143,12 +141,11 @@ namespace nktool
 		public double Run()
 		{
 			PerfWatch t = new PerfWatch();
+			byte[] digest = new byte[(DigestBits + 7) / 8];
+			byte[] input = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
 			using (Hash hash = new Hash(Hashsum, 0)) {
-				byte[] digest = new byte[(DigestBits + 7) / 8];
-				byte[] input = new byte[megabytes * 1048576];
-
 				hash.Update(input, input.Length);
 				hash.Final(digest);
 				hash.Reset();
@@ -174,10 +171,10 @@ namespace nktool
 				0x01, 0x23, 0x02, 0x34, 0x03, 0x45, 0x04, 0x56
 			};
 			PerfWatch t = new PerfWatch();
+			byte[] output = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
 			using (Prng prng = new Prng(Prng)) {
-				byte[] output = new byte[megabytes * 1048576];
 				prng.SetSeed(seed);
 				prng.Update(output);
 				prng.SetSeed(seed);

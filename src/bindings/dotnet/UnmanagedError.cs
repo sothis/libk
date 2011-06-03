@@ -22,7 +22,7 @@ namespace nlibk
 		internal static class SafeNativeMethods
 		{
 			/* void k_set_error_handler(k_err_fn error_handler); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_set_error_handler(ErrorCallback errorcallback);
 		}
 

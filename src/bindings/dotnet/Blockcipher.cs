@@ -24,58 +24,58 @@ namespace nlibk
 			/* low level api without error checking */
 
 			/* k_bc_t* k_bc_init(enum blockcipher_e cipher); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_bc_init(BlockcipherKind cipher);
 
 			/* void k_bc_finish(k_bc_t* c); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_finish(UIntPtr context);
 
 			/* void k_bc_set_encrypt_key(k_bc_t* c, const void* k, uint32_t bits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_set_encrypt_key(UIntPtr context, [In] byte[] key, UInt32 bits);
 
 			/* void k_bc_set_decrypt_key(k_bc_t* c, const void* k, uint32_t bits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_set_decrypt_key(UIntPtr context, [In] byte[] key, UInt32 bits);
 
 			/* void k_bc_set_tweak(k_bc_t* c, const void* t, uint32_t bits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_set_tweak(UIntPtr context, [In] byte[] tweak, UInt32 bits);
 
 			/* void k_bc_encrypt(k_bc_t* c, const void* i, void* o); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_encrypt(UIntPtr context, [In] byte[] input, [Out] byte[] output);
 
 			/* void k_bc_decrypt(k_bc_t* c, const void* i, void* o); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bc_decrypt(UIntPtr context, [In] byte[] input, [Out] byte[] output);
 
 			/* size_t k_bc_get_blocksize(k_bc_t* c); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_bc_get_blocksize(UIntPtr context);
 
 
 			/* high level api using a specific blockcipher mode */
 
 			/* int32_t k_bcmode_set_mode(k_bc_t* c, enum bcmode_e mode, int32_t max_workers); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern int k_bcmode_set_mode(UIntPtr context, BlockcipherModeKind mode, Int32 max_workers);
 
 			/* int32_t k_bcmode_set_key(k_bc_t* c, const void* k, uint32_t bits, enum keytype_e t); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern int k_bcmode_set_key(UIntPtr context, [In] byte[] key, UInt32 bits, KeyKind type);
 
 			/* int32_t k_bcmode_set_tweak(k_bc_t* c, const void* t, uint32_t bits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern int k_bcmode_set_tweak(UIntPtr context, [In] byte[] tweak, UInt32 bits);
 
 			/* void k_bcmode_set_iv(k_bc_t* c, const void* iv); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bcmode_set_iv(UIntPtr context, [In] byte[] iv);
 
 			/* void k_bcmode_update(k_bc_t* c, const void* i, void* o, size_t blocks); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_bcmode_update(UIntPtr context, [In] byte[] input, [Out] byte[] output, UIntPtr blocks);
 		}
 

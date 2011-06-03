@@ -17,9 +17,16 @@
 #include "utils/endian-neutral.h"
 #include "utils/unittest_desc.h"
 
+enum platform_characteristics_e {
+	wordsize	= 32,
+	cachesize	= 4096*((wordsize+7)/8),
+};
+
 struct platform_t {
-	int	fd_random;
-	int	fd_urandom;
+	int		fd_random;
+	int		fd_urandom;
+	size_t		cache_fill;
+	uint32_t	cache[4096];
 };
 
 static void platform_setfds(void* state, int fd_random, int fd_urandom)
@@ -36,14 +43,25 @@ static void platform_update(void* state, void* output)
 	rand_s(&r);
 #else
 	struct platform_t* c = state;
+
+	if (c->cache_fill) {
+		c->cache_fill--;
+		r = c->cache[c->cache_fill];
+		_put_uint32_l(output, r);
+		return;
+	}
+
 	size_t total = 0;
 	ssize_t nread;
-	while ((nread = read(c->fd_urandom, &r + total,
-		sizeof(uint32_t) - total)) > 0) {
+	void* cache = c->cache;
+	while ((nread = read(c->fd_urandom, cache + total,
+		cachesize - total)) > 0) {
 		total += nread;
-		if (total == sizeof(uint32_t))
+		if (total == cachesize)
 			break;
 	}
+	c->cache_fill = 4095;
+	r = c->cache[c->cache_fill];
 #endif
 	_put_uint32_l(output, r);
 }
@@ -56,7 +74,7 @@ static const char* const authors[] = {
 
 prng_start(PLATFORM, "Platform Specific Prng")
 	.authors		= authors,
-	.word_size		= 32,
+	.word_size		= wordsize,
 	.context_size		= sizeof(struct platform_t),
 	.setfds			= &platform_setfds,
 	.update			= &platform_update,
