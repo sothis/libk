@@ -172,8 +172,8 @@ __export_function void k_sc_update
 			c->partial_remaining -= b;
 
 			if (c->partial_remaining) {
-				const void* oiv = k_bcmode_get_iv(c->blockcipher);
-				memcpy(c->old_iv, oiv, bs);
+				const void* o = k_bcmode_get_iv(c->blockcipher);
+				memcpy(c->old_iv, o, bs);
 			}
 
 			k_bcmode_update(c->blockcipher, c->partial_block,
