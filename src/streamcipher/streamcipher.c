@@ -230,3 +230,9 @@ __export_function void k_sc_update
 		}
 	}
 }
+
+__export_function void k_sc_keystream
+(struct k_sc_t* c, void* output, size_t bytes)
+{
+	k_sc_update(c, 0, output, bytes);
+}

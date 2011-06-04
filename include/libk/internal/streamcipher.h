@@ -37,5 +37,8 @@ extern size_t k_sc_get_nonce_bytes
 extern void k_sc_update
 (k_sc_t* c, const void* input, void* output, size_t bytes);
 
+extern void k_sc_keystream
+(k_sc_t* c, void* output, size_t bytes);
+
 
 #endif /* _KSTREAMCIPHER_H */
