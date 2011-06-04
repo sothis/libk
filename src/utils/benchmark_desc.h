@@ -39,7 +39,7 @@ struct benchmark_desc {
 /* benchmark stubs */
 
 #define PROCESS_MB 32
-#define bcmode_perftest(_name, _desc, _cipher, _mode, _type, _keysize)	\
+#define bcmode_perftest(_name, _desc, _cipher, _mode, _type, _keysize, i) \
 benchmark(_name, _desc)							\
 {									\
 	k_bc_t* c;							\
@@ -60,10 +60,10 @@ benchmark(_name, _desc)							\
 	k_bcmode_set_iv(c, iv_buf);					\
 	k_free(iv_buf);							\
 	k_free(key_buf);						\
-	k_bcmode_update(c, in_buf, in_buf,				\
+	k_bcmode_update(c, i ? in_buf : 0, in_buf,			\
 		PROCESS_MB*1048576ul / blocksize);			\
 	gettimeofday(&b, 0);						\
-	k_bcmode_update(c, in_buf, in_buf,				\
+	k_bcmode_update(c, i ? in_buf : 0, in_buf,			\
 		PROCESS_MB*1048576ul / blocksize);			\
 	gettimeofday(&e, 0);						\
 	usec = ((e.tv_sec*1000000ull + e.tv_usec) -			\
