@@ -78,18 +78,13 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		goto k_sc_init_err;
 
 	size_t bs = k_bc_get_blocksize(c->blockcipher);
-	/* TODO: lock this memory */
+
 	c->partial_block = k_calloc(1, bs);
 	if (!c->partial_block) {
 		err = K_ENOMEM;
 		goto k_sc_init_err;
 	}
-	/* TODO: lock this memory */
-	c->old_iv = k_calloc(1, bs);
-	if (!c->old_iv) {
-		err = K_ENOMEM;
-		goto k_sc_init_err;
-	}
+
 	if (k_bcmode_set_mode(c->blockcipher, (enum bcmode_e)mode,
 	max_workers))
 		goto k_sc_init_err;
@@ -111,8 +106,6 @@ __export_function void k_sc_finish
 			k_bc_finish(c->blockcipher);
 		if (c->partial_block)
 			k_free(c->partial_block);
-		if (c->old_iv)
-			k_free(c->old_iv);
 		if (c->ctx)
 			k_locked_free(c->ctx, c->alloced_ctxsize);
 		k_free(c);
@@ -179,17 +172,14 @@ __export_function void k_sc_update
 
 			c->partial_remaining -= b;
 
-			if (c->partial_remaining) {
-				const void* o = k_bcmode_get_iv(c->blockcipher);
-				memcpy(c->old_iv, o, bs);
-			}
+			if (c->partial_remaining)
+				k_bcmode_backup_iv(c->blockcipher);
 
 			k_bcmode_update(c->blockcipher, input ?
 				c->partial_block : 0, first_block_out, 1);
 
-			if (c->partial_remaining) {
-				k_bcmode_set_iv(c->blockcipher, c->old_iv);
-			}
+			if (c->partial_remaining)
+				k_bcmode_restore_iv(c->blockcipher);
 
 			memcpy(output, first_block_out+c->partial_bytes, b);
 			c->partial_bytes += b;
@@ -210,9 +200,7 @@ __export_function void k_sc_update
 		if (rem) {
 			uint8_t last_block_out[bs];
 
-			/* backup old iv */
-			const void* oiv = k_bcmode_get_iv(c->blockcipher);
-			memcpy(c->old_iv, oiv, bs);
+			k_bcmode_backup_iv(c->blockcipher);
 
 			memset(c->partial_block, 0, bs);
 			memset(last_block_out, 0, bs);
@@ -225,8 +213,7 @@ __export_function void k_sc_update
 			c->partial_remaining = bs - rem;
 			c->have_partial_block = 1;
 
-			/* restore old iv */
-			k_bcmode_set_iv(c->blockcipher, c->old_iv);
+			k_bcmode_restore_iv(c->blockcipher);
 		}
 	}
 }

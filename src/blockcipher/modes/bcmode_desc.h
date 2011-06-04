@@ -66,6 +66,7 @@ struct k_bc_t {
 	const struct blockcipher_desc*	blockcipher;
 
 	uint8_t**			worker_ivs;
+	uint8_t*			iv_backup;
 	void*				schedule;
 	size_t				alloced_schedsize;
 

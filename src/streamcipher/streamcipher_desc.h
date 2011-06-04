@@ -65,7 +65,6 @@ struct k_sc_t {
 	void*					partial_block;
 	size_t					partial_bytes;
 	size_t					partial_remaining;
-	void*					old_iv;
 	int					have_partial_block;
 } __attribute__((_section_alignment));
 

@@ -91,6 +91,9 @@ static inline void free_mode_resources
 				k_free(c->worker_ivs[i]);
 		k_free(c->worker_ivs);
 	}
+	if (c->iv_backup)
+		k_free(c->iv_backup);
+
 	c->mode = 0;
 	c->tweaksize = 0;
 	c->keysize = 0;
@@ -176,6 +179,12 @@ __export_function int32_t k_bcmode_set_mode
 			err = K_ENOMEM;
 			goto k_bc_set_mode_err;
 		}
+	}
+
+	c->iv_backup = k_calloc(c->blockcipher->block_size, sizeof(uint8_t));
+	if (!c->iv_backup) {
+		err = K_ENOMEM;
+		goto k_bc_set_mode_err;
 	}
 
 	return 0;
@@ -371,6 +380,18 @@ __export_function const void* k_bcmode_get_iv
 (struct k_bc_t* c)
 {
 	return c->worker_ivs[0];
+}
+
+__export_function void k_bcmode_backup_iv
+(struct k_bc_t* c)
+{
+	memcpy(c->iv_backup, c->worker_ivs[0], c->blockcipher->block_size);
+}
+
+__export_function void k_bcmode_restore_iv
+(struct k_bc_t* c)
+{
+	memcpy(c->worker_ivs[0], c->iv_backup, c->blockcipher->block_size);
 }
 
 static void parallel_worker
