@@ -79,8 +79,8 @@ struct k_bc_t {
 	void*				workbench;
 	size_t				worker_threads;
 
-	size_t				keysize;
-	size_t				tweaksize;
+	uint32_t			keysize;
+	uint32_t			tweaksize;
 	enum keytype_e			keytype;
 	uint32_t			insecure_encryption;
 } __attribute__((_section_alignment));

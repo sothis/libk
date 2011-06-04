@@ -91,8 +91,8 @@ namespace nktool
 			byte[] output = new byte[megabytes * 1048576];
 			t.Start();
 			t.Stop();
-			using (Streamcipher sc = new Streamcipher(cipherkind)) {
-				sc.SetKey(key, keybits);
+			using (Streamcipher sc = new Streamcipher(cipherkind, keybits)) {
+				sc.SetKey(key, null);
 				sc.Update(input, output);
 				GC.Collect();
 				t.Start();
@@ -120,7 +120,8 @@ namespace nktool
 			t.Start();
 			t.Stop();
 			using (Streamcipher sc = new Streamcipher(cipherkind, streammode)) {
-				sc.SetKey(key, keybits);
+				byte[] nonce = new byte[sc.Noncesize];
+				sc.SetKey(nonce, key, keybits);
 				sc.Update(input, output);
 				GC.Collect();
 				t.Start();

@@ -11,6 +11,7 @@
 #include <libk/libk.h>
 #include "utils/sections.h"
 #include "utils/err.h"
+#include "utils/mem.h"
 #include "utils/dumphx.h"
 
 #include <stdlib.h>
@@ -153,7 +154,7 @@ __export_function int k_pres_add_file
 
 	k_hash_reset(pf->hash);
 	if (pf->scipher)
-		k_sc_set_nonce(pf->scipher, data_nonce);
+		k_sc_set_key(pf->scipher, data_nonce, pf->key, pf->hdr.keysize);
 	ssize_t nread;
 	while ((nread = read(fd, pf->iobuf, PRES_IOBUF_SIZE)) > 0) {
 		ssize_t nwritten, total = 0;
@@ -237,31 +238,29 @@ static inline int _addu64(uint64_t* res, uint64_t a, uint64_t b)
 }
 
 static k_sc_t* _init_streamcipher
-(struct pres_file_header_t* hdr, const void* key)
+(struct pres_file_header_t* hdr)
 {
 	k_sc_t* c = 0;
 
 	if (hdr->ciphermode)
 		c = k_sc_init_with_blockcipher(hdr->cipher, hdr->ciphermode, 0);
 	else
-		c = k_sc_init(hdr->cipher);
+		/* for simplicity we use nonce bits == key bits here */
+		c = k_sc_init(hdr->cipher, hdr->keysize);
 
 	if (!c)
 		return 0;
 
-	if (k_sc_set_key(c, key, hdr->keysize)) {
-		k_sc_finish(c);
-		c = 0;
-	}
-
 	return c;
 }
 
+#if 0
 static void _cryptonce(k_sc_t* c, void* mem, const void* nonce, size_t s)
 {
 	k_sc_set_nonce(c, nonce);
 	k_sc_update(c, mem, mem, s);
 }
+#endif
 
 static int _open_pres(const char* name)
 {
@@ -397,9 +396,11 @@ static int _get_detached_header(struct pres_file_t* pf)
 	memcpy(&pf->dhdr, map.mem, sz_detached_hdr);
 	pres_unmap(&map);
 
-	if (pf->scipher)
-		_cryptonce(pf->scipher, &pf->dhdr, pf->hdr.detached_header_iv,
-			sz_detached_hdr);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, pf->hdr.detached_header_iv,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, sz_detached_hdr);
+	}
 
 	if (_verify_detached_header(pf))
 		return -1;
@@ -532,9 +533,11 @@ static int _get_rtbl(struct pres_file_t* pf)
 	memcpy(pf->rtbl, map.mem, sz_res_tbl);
 	pres_unmap(&map);
 
-	if (pf->scipher)
-		_cryptonce(pf->scipher, pf->rtbl, pf->dhdr.resource_table_iv,
-			sz_res_tbl);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, pf->dhdr.resource_table_iv,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, sz_res_tbl);
+	}
 
 	if (_verify_rtbl(pf))
 		goto fail;
@@ -599,10 +602,12 @@ static int _get_stringpool(struct pres_file_t* pf)
 
 	pres_unmap(&map);
 
-	if (pf->scipher)
-		_cryptonce(pf->scipher, pf->stringpool.base,
-			pf->rtbl->string_pool_iv,
-			pf->stringpool.data_size);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, pf->rtbl->string_pool_iv,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, pf->stringpool.base,
+			pf->stringpool.base, pf->stringpool.data_size);
+	}
 
 	if (_verify_stringpool(pf)) {
 		pool_free(&pf->stringpool);
@@ -626,7 +631,11 @@ static int _pres_open_key
 	if (pf->hdr.cipher) {
 		if (!key)
 			goto failed;
-		pf->scipher = _init_streamcipher(&pf->hdr, key);
+		pf->key = k_calloc((pf->hdr.keysize+7)/8, 1);
+		if (!pf->key)
+			goto failed;
+		memcpy(pf->key, key, (pf->hdr.keysize+7)/8);
+		pf->scipher = _init_streamcipher(&pf->hdr);
 		if (!pf->scipher)
 			goto failed;
 	}
@@ -645,6 +654,8 @@ static int _pres_open_key
 	pf->is_open = 1;
 	return 0;
 failed:
+	if (pf->key)
+		k_free(pf->key);
 	if (pf->hash)
 		k_hash_finish(pf->hash);
 	if (pf->iobuf)
@@ -769,17 +780,20 @@ __export_function int k_pres_create
 	if (pf->hdr.cipher) {
 		if (!opt->key && !opt->pass)
 			goto err_out;
-		if (opt->key)
-			pf->scipher = _init_streamcipher(&pf->hdr, opt->key);
-		else {
+		if (opt->key) {
+			pf->scipher = _init_streamcipher(&pf->hdr);
+			pf->key = k_calloc((pf->hdr.keysize+7)/8, 1);
+			if (!pf->key)
+				goto err_out;
+			memcpy(pf->key, opt->key, (pf->hdr.keysize+7)/8);
+		} else {
 			k_prng_update(pf->prng, pf->hdr.kdf_salt,
 				PRES_MAX_IV_LENGTH);
-			void* key = _k_key_derive_simple1024(opt->pass,
+			pf->key = _k_key_derive_simple1024(opt->pass,
 				pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
-			if (!key)
+			if (!pf->key)
 				goto err_out;
-			pf->scipher = _init_streamcipher(&pf->hdr, key);
-			free(key);
+			pf->scipher = _init_streamcipher(&pf->hdr);
 		}
 		if (!pf->scipher)
 			goto err_out;
@@ -819,6 +833,8 @@ err_out:
 		k_trollback_and_close(pf->fd);
 	if (pf->rtbl)
 		free(pf->rtbl);
+	if (pf->key)
+		k_free(pf->key);
 	return -1;
 }
 
@@ -872,16 +888,23 @@ static int _commit_and_close(struct pres_file_t* pf)
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_detached_hdr;
-	if (pf->scipher)
-		_cryptonce(pf->scipher, &pf->dhdr, dhdr_nonce, s);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, dhdr_nonce,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, s);
+	}
 	if (write(pf->fd, &pf->dhdr, s) != s)
 		goto err_out;
 
 	if (lseek(pf->fd, pf->rtbl->string_pool_start, SEEK_SET) == -1)
 		goto err_out;
 	s = pf->stringpool.data_size;
-	if (pf->scipher)
-		_cryptonce(pf->scipher, pf->stringpool.base, spool_nonce, s);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, spool_nonce,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, pf->stringpool.base,
+			pf->stringpool.base, s);
+	}
 	if (write(pf->fd, pf->stringpool.base, s) != s)
 		goto err_out;
 
@@ -898,8 +921,11 @@ static int _commit_and_close(struct pres_file_t* pf)
 	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1)
 		goto err_out;
 	s = sz_res_tbl + pf->rtbl->entries*sz_res_tbl_entry;
-	if (pf->scipher)
-		_cryptonce(pf->scipher, pf->rtbl, rtbl_nonce, s);
+	if (pf->scipher) {
+		k_sc_set_key(pf->scipher, rtbl_nonce,
+			pf->key, pf->hdr.keysize);
+		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, s);
+	}
 	if (write(pf->fd, pf->rtbl, s) != s)
 		goto err_out;
 
@@ -922,6 +948,8 @@ out:
 		free(pf->rtbl);
 	if (pf->iobuf)
 		free(pf->iobuf);
+	if (pf->key)
+		k_free(pf->key);
 	memset(pf, 0, sizeof(struct pres_file_t));
 	return res;
 }
@@ -975,8 +1003,10 @@ __export_function void k_pres_res_by_id
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
 	res->scipher = pf->scipher;
-	if (res->scipher)
-		k_sc_set_nonce(res->scipher, table[id-1].data_iv);
+	if (res->scipher) {
+		k_sc_set_key(pf->scipher, table[id-1].data_iv, pf->key,
+			pf->hdr.keysize);
+	}
 }
 
 __export_function uint64_t k_pres_res_size
@@ -1053,6 +1083,8 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 			free(pf->rtbl);
 		if (pf->iobuf)
 			free(pf->iobuf);
+		if (pf->key)
+			k_free(pf->key);
 		memset(pf, 0, sizeof(struct pres_file_t));
 		return 0;
 	}

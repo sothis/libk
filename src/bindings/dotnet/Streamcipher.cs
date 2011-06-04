@@ -21,9 +21,9 @@ namespace nlibk
 		[SuppressUnmanagedCodeSecurityAttribute]
 		internal static class SafeNativeMethods
 		{
-			/* k_sc_t* k_sc_init(enum streamcipher_e cipher); */
+			/* k_sc_t* k_sc_init(enum streamcipher_e cipher, uint32_t noncebits); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
-			internal static extern UIntPtr k_sc_init(StreamcipherKind cipher);
+			internal static extern UIntPtr k_sc_init(StreamcipherKind cipher, UInt32 noncebits);
 
 			/* k_sc_t* k_sc_init_with_blockcipher(enum blockcipher_e cipher, enum bcmode_e mode, size_t max_workers); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
@@ -33,17 +33,17 @@ namespace nlibk
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_sc_finish(UIntPtr context);
 
-			/* void k_sc_set_nonce(k_sc_t* c, const void* nonce); */
+			/* int32_t k_sc_set_key(k_sc_t* c, const void* nonce, const void* key, uint32_t keybits); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
-			internal static extern void k_sc_set_nonce(UIntPtr context, [In] byte[] nonce);
-
-			/* int32_t k_sc_set_key(k_sc_t* c, const void* key, uint32_t keybits); */
-			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
-			internal static extern int k_sc_set_key(UIntPtr context, [In] byte[] key, UInt32 bits);
+			internal static extern int k_sc_set_key(UIntPtr context, [In] byte[] nonce, [In] byte[] key, UInt32 keybits);
 
 			/* void k_sc_update(k_sc_t* c, const void* input, void* output, size_t bytes); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern void k_sc_update(UIntPtr context, [In] byte[] input, [Out] byte[] output, UIntPtr bytes);
+
+			/* size_t k_sc_get_nonce_bytes(k_sc_t* c); */
+			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
+			internal static extern UIntPtr k_sc_get_nonce_bytes(UIntPtr context);
 		}
 
 		#endregion
@@ -52,11 +52,11 @@ namespace nlibk
 		#region Initialization
 
 		private UIntPtr context;
-		public Streamcipher(StreamcipherKind algorithm)
+		public Streamcipher(StreamcipherKind algorithm, int noncebits)
 		{
 			if (UnmanagedError.RegisterThread() != ErrorKind.K_ESUCCESS)
 				throw new Exception("unable to register libk error handler");
-			if ((context = SafeNativeMethods.k_sc_init(algorithm)) == (UIntPtr)0)
+			if ((context = SafeNativeMethods.k_sc_init(algorithm, (uint)noncebits)) == (UIntPtr)0)
 				UnmanagedError.ThrowLastError();
 		}
 
@@ -74,28 +74,21 @@ namespace nlibk
 
 		#endregion
 
-		public void SetKey(byte[] key, int bits)
-		{
-			if (key == null)
-				throw new ArgumentNullException();
-			if (bits > int.MaxValue - 7)
-				throw new ArgumentException();
-			if (key.Length < ((bits + 7) / 8))
-				throw new ArgumentOutOfRangeException();
-			if (SafeNativeMethods.k_sc_set_key(context, key, (uint)bits) != 0)
-				UnmanagedError.ThrowLastError();
-		}
-
-		public void SetKey(byte[] key)
-		{
-			SetKey(key, key.Length * 8);
-		}
-
-		public void SetNonce(byte[] nonce)
+		public void SetKey(byte[] nonce, byte[] key, int keybits)
 		{
 			if (nonce == null)
 				throw new ArgumentNullException();
-			SafeNativeMethods.k_sc_set_nonce(context, nonce);
+			if ((key != null) && (keybits > int.MaxValue - 7))
+				throw new ArgumentException();
+			if ((key != null) && (key.Length < ((keybits + 7) / 8)))
+				throw new ArgumentOutOfRangeException();
+			if (SafeNativeMethods.k_sc_set_key(context, nonce, key, (uint)keybits) != 0)
+				UnmanagedError.ThrowLastError();
+		}
+
+		public void SetKey(byte[] nonce, byte[] key)
+		{
+			SetKey(nonce, key, (key == null) ? 0 : key.Length * 8);
 		}
 
 		public void Update(byte[] input, byte[] output, int bytes)
@@ -115,6 +108,18 @@ namespace nlibk
 				throw new ArgumentNullException();
 			Update(input, output, output.Length);
 		}
+
+		#region Properties
+
+		public long Noncesize
+		{
+			get
+			{
+				return (long)SafeNativeMethods.k_sc_get_nonce_bytes(context);
+			}
+		}
+
+		#endregion
 
 
 		#region IDisposable

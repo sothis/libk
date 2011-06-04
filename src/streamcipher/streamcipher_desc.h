@@ -24,6 +24,7 @@ typedef void (*sc_init_fn)(
 
 typedef void (*sc_update_fn)(
 	void*		state,
+	const void*	input,
 	void*		output,
 	size_t		length
 );
@@ -61,6 +62,7 @@ struct k_sc_t {
 	const struct streamcipher_desc*		cipher;
 	k_bc_t*					blockcipher;
 	void*					ctx;
+	uint32_t				noncesize;
 	size_t					alloced_ctxsize;
 	void*					partial_block;
 	size_t					partial_bytes;

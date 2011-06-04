@@ -17,7 +17,7 @@
 typedef struct k_sc_t k_sc_t;
 
 extern k_sc_t* k_sc_init
-(enum streamcipher_e cipher);
+(enum streamcipher_e cipher, uint32_t noncebits);
 
 extern k_sc_t* k_sc_init_with_blockcipher
 (enum blockcipher_e cipher, enum bcmode_e mode, size_t max_workers);
@@ -26,10 +26,7 @@ extern void k_sc_finish
 (k_sc_t* c);
 
 extern int32_t k_sc_set_key
-(k_sc_t* c, const void* key, uint32_t keybits);
-
-extern void k_sc_set_nonce
-(k_sc_t* c, const void* nonce);
+(k_sc_t* c, const void* nonce, const void* key, uint32_t keybits);
 
 extern size_t k_sc_get_nonce_bytes
 (k_sc_t* c);

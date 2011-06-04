@@ -28,7 +28,7 @@ static inline const struct streamcipher_desc* sc_get_by_id
 }
 
 __export_function struct k_sc_t* k_sc_init
-(enum streamcipher_e cipher)
+(enum streamcipher_e cipher, uint32_t noncebits)
 {
 	enum k_error_e err = K_ESUCCESS;
 	struct k_sc_t* c = 0;
@@ -56,6 +56,13 @@ __export_function struct k_sc_t* k_sc_init
 		goto k_sc_init_err;
 	}
 
+	if (!noncebits) {
+		// set err
+		goto k_sc_init_err;
+	}
+	// check valid noncesize for cipher here
+	c->noncesize = noncebits;
+
 	return c;
 
 k_sc_init_err:
@@ -78,7 +85,7 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		goto k_sc_init_err;
 	}
 
-	c = k_sc_init(STREAM_CIPHER_NOOP);
+	c = k_sc_init(STREAM_CIPHER_NOOP, 0);
 	if (!c)
 		return NULL;
 	c->blockcipher = k_bc_init(cipher);
@@ -86,6 +93,7 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		goto k_sc_init_err;
 
 	size_t bs = k_bc_get_blocksize(c->blockcipher);
+	c->noncesize = bs/8;
 
 	c->partial_block = k_calloc(1, bs);
 	if (!c->partial_block) {
@@ -121,47 +129,45 @@ __export_function void k_sc_finish
 }
 
 __export_function int32_t k_sc_set_key
-(struct k_sc_t* c, const void* key, uint32_t keybits)
+(struct k_sc_t* c, const void* nonce, const void* key, uint32_t keybits)
 {
 	if (c->cipher) {
 		if (c->cipher->insecure)
 			k_warn(K_EINSECUREENC);
-		/* TODO: test for valid keysize here */
-		c->cipher->init(c->ctx, key, keybits);
-	}
-	else return k_bcmode_set_key(c->blockcipher, key, keybits,
-			BLK_CIPHER_KEY_ENCRYPT);
-	return 0;
-}
+		if (key && (keybits > c->noncesize)) {
+			// err here
+			return -1;
+		}
+		size_t noncebytes = (c->noncesize+7)/8;
+		void* k = k_calloc(noncebytes, 1);
+		memcpy(k, nonce, noncebytes);
+		if (key)
+			xorb_64(k, k, key, (keybits+7)/8);
 
-__export_function void k_sc_set_nonce
-(struct k_sc_t* c, const void* nonce)
-{
-	if (c->blockcipher) {
-		c->have_partial_block = 0;
-		k_bcmode_set_iv(c->blockcipher, nonce);
+		c->cipher->init(c->ctx, k, c->noncesize);
+		k_free(k);
 	}
-	// TODO: introduce nonce infrastructure for pure stream ciphers
-	// in order to be able to construct custom cryptosystems
+	else {
+		if (key && k_bcmode_set_key(c->blockcipher, key, keybits,
+			BLK_CIPHER_KEY_ENCRYPT))
+			return -1;
+		k_bcmode_set_iv(c->blockcipher, nonce);
+		c->have_partial_block = 0;
+	}
+	return 0;
 }
 
 __export_function size_t k_sc_get_nonce_bytes
 (struct k_sc_t* c)
 {
-	if (c->blockcipher)
-		return k_bc_get_blocksize(c->blockcipher);
-	// TODO: introduce nonce infrastructure for pure stream ciphers
-	// in order to be able to construct custom cryptosystems
-	return 0;
+	return (c->noncesize+7) / 8;
 }
 
 __export_function void k_sc_update
 (struct k_sc_t* c, const void* input, void* output, size_t bytes)
 {
 	if (c->cipher) {
-		c->cipher->update(c->ctx, output, bytes);
-		if (input)
-			xorb_64(output, input, output, bytes);
+		c->cipher->update(c->ctx, input, output, bytes);
 		return;
 	} else {
 		size_t bs = k_bc_get_blocksize(c->blockcipher);

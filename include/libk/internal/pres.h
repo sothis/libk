@@ -146,6 +146,7 @@ struct pres_file_t {
 	uint64_t			cur_stringpoolstart;
 	uint64_t			cur_stringpoolsize;
 	uint8_t*			iobuf;
+	void*				key;
 	struct mempool_t		stringpool;
 	struct pres_file_header_t	hdr;
 	struct pres_detached_header_t	dhdr;

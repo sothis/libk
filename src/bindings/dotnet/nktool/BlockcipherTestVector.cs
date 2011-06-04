@@ -97,8 +97,7 @@ namespace nktool
 			byte[] plaintext = null;
 
 			using (Streamcipher cipher = new Streamcipher(Cipher, Mode)) {
-				cipher.SetNonce(_iv);
-				cipher.SetKey(_key);
+				cipher.SetKey(_iv ,_key);
 				ciphertext = new byte[_plaintext.Length];
 
 				byte[] c = new byte[64];
@@ -112,15 +111,14 @@ namespace nktool
 
 				enc = CipherMatch(ciphertext);
 
-				cipher.SetKey(_key);
-				cipher.SetNonce(_iv);
+				cipher.SetKey(_iv ,_key);
 				plaintext = new byte[_ciphertext.Length];
 				cipher.Update(_ciphertext, plaintext);
 				dec = PlainMatch(plaintext);
 
 				/* test mix-sized block updating */
 				if (_ciphertext.Length > 48) {
-					cipher.SetNonce(_iv);
+					cipher.SetKey(_iv ,_key);
 
 					System.Buffer.BlockCopy(_ciphertext, 0, c, 0, 24);
 					cipher.Update(c, p, 24);

@@ -13,7 +13,6 @@
 #include <string.h>
 #include "streamcipher_desc.h"
 #include "utils/unittest_desc.h"
-#include "utils/xor.h"
 
 struct arc4_t {
 	uint8_t		m[256];
@@ -51,10 +50,11 @@ static void arc4_init
 }
 
 static void arc4_update
-(void* state, void* output, size_t length)
+(void* state, const void* input, void* output, size_t length)
 {
 	struct arc4_t* c = state;
 	uint8_t x, y, j;
+	const uint8_t* in = input;
 	uint8_t* out = output;
 
 	x = c->x;
@@ -65,7 +65,10 @@ static void arc4_update
 		y = (c->m[x] + y) & 255;
 		swap8(c->m+x, c->m+y);
 		j = (c->m[x] + c->m[y]) & 255;
-		out[i] = c->m[j];
+		if (in)
+			out[i] = in[i] ^ c->m[j];
+		else
+			out[i] = c->m[j];
 	}
 
 	c->x = x;
@@ -94,8 +97,7 @@ unittest(arc4, "ARC4")
 	uint8_t _out[sizeof(_plain)];
 
 	arc4_init(&c, _key, sizeof(_key)*8);
-	arc4_update(&c, _out, sizeof(_plain));
-	xorb_64(_out, _plain, _out, sizeof(_plain));
+	arc4_update(&c, _plain, _out, sizeof(_plain));
 
 	if (memcmp(_out, _cipher, sizeof(_cipher))) {
 		*details = "output does not match expected ciphertext";

@@ -58,13 +58,13 @@ namespace nktool
 			byte[] ciphertext = null;
 			byte[] plaintext = null;
 
-			using (Streamcipher cipher = new Streamcipher(Cipher)) {
-				cipher.SetKey(_key);
+			using (Streamcipher cipher = new Streamcipher(Cipher, _key.Length*8)) {
+				cipher.SetKey(_key, null);
 				ciphertext = new byte[_plaintext.Length];
 				cipher.Update(_plaintext, ciphertext);
 				enc = CipherMatch(ciphertext);
 
-				cipher.SetKey(_key);
+				cipher.SetKey(_key, null);
 				plaintext = new byte[_ciphertext.Length];
 				cipher.Update(_ciphertext, plaintext);
 				dec = PlainMatch(plaintext);
