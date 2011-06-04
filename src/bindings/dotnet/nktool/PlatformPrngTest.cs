@@ -18,7 +18,7 @@ namespace nktool
 		{
 			return new TestPrngThroughput {
 				Prng = PrngKind.Platform,
-				megabytes = 16
+				megabytes = 8
 			}.Run();
 		}
 	}

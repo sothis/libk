@@ -70,7 +70,11 @@ static inline size_t distribute_work
 			get_blocks_per_worker(nw, b, worker);
 		pa[worker].m = m;
 		pa[worker].worker_num = worker;
-		pa[worker].in = pa[worker-1].in + pa[worker-1].nblocks*bs;
+		if (i)
+			pa[worker].in = pa[worker-1].in +
+				pa[worker-1].nblocks*bs;
+		else
+			pa[worker].in = 0;
 		pa[worker].out = pa[worker-1].out + pa[worker-1].nblocks*bs;
 	}
 	return worker;
@@ -381,10 +385,12 @@ static void parallel_worker
 
 	if (m->keytype == BLK_CIPHER_KEY_ENCRYPT)
 		for (size_t b = 0; b < nblocks; ++b)
-			m->mode->encrypt(m,i+(b*bs),o+(b*bs),p->worker_num);
+			m->mode->encrypt(m, i ? i+(b*bs) : 0,
+				o+(b*bs), p->worker_num);
 	else
 		for (size_t b = 0; b < nblocks; ++b)
-			m->mode->decrypt(m,i+(b*bs),o+(b*bs),p->worker_num);
+			m->mode->decrypt(m, i ? i+(b*bs) : 0,
+				o+(b*bs), p->worker_num);
 }
 
 static void process_block_parallel
@@ -432,5 +438,5 @@ __export_function void k_bcmode_update
 			process_block_parallel(c, i, o, blocks);
 	} else
 		for (size_t b = 0; b < blocks; ++b)
-			process_block(c, i+(b*bs), o+(b*bs));
+			process_block(c, i ? i+(b*bs) : 0, o+(b*bs));
 }

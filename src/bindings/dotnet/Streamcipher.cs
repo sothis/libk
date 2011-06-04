@@ -100,18 +100,20 @@ namespace nlibk
 
 		public void Update(byte[] input, byte[] output, int bytes)
 		{
-			if (input == null || output == null)
+			if (output == null)
 				throw new ArgumentNullException();
-			if ((bytes <= 0) || (input.LongLength < bytes) || (output.LongLength < bytes))
+			if ((bytes <= 0) || (output.LongLength < bytes))
+				throw new ArgumentOutOfRangeException();
+			if ((input != null) && (output.LongLength < input.LongLength))
 				throw new ArgumentOutOfRangeException();
 			SafeNativeMethods.k_sc_update(context, input, output, (UIntPtr)bytes);
 		}
 
 		public void Update(byte[] input, byte[] output)
 		{
-			if (output.LongLength < input.LongLength)
-				throw new ArgumentException();
-			Update(input, output, input.Length);
+			if (output == null)
+				throw new ArgumentNullException();
+			Update(input, output, output.Length);
 		}
 
 

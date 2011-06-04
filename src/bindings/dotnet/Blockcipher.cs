@@ -193,6 +193,8 @@ namespace nlibk
 
 		public void Update(byte[] input, byte[] output)
 		{
+			if (input == null || output == null)
+				throw new ArgumentNullException();
 			if (input.Length % Blocksize != 0)
 				throw new ArgumentException();
 			if (output.LongLength < input.LongLength)
