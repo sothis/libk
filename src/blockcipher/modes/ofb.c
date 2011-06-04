@@ -19,11 +19,13 @@ static void ofb_crypt
 	uint8_t* iv = m->worker_ivs[0];
 	uint8_t b[bs];
 
-	memcpy(b, i, bs);
+	if (i)
+		memcpy(b, i, bs);
 
 	m->blockcipher->encrypt(m->schedule, iv, o);
 	memcpy(iv, o, bs);
-	xorb_64(o, o, b, bs);
+	if (i)
+		xorb_64(o, o, b, bs);
 }
 
 

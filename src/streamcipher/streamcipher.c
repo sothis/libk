@@ -12,6 +12,7 @@
 #include "streamcipher_desc.h"
 #include "utils/mem.h"
 #include "utils/err.h"
+#include "utils/xor.h"
 
 section_prologue(__streamciphers, struct streamcipher_desc);
 
@@ -156,9 +157,12 @@ __export_function size_t k_sc_get_nonce_bytes
 __export_function void k_sc_update
 (struct k_sc_t* c, const void* input, void* output, size_t bytes)
 {
-	if (c->cipher)
-		return c->cipher->update(c->ctx, input, output, bytes);
-	else {
+	if (c->cipher) {
+		c->cipher->update(c->ctx, output, bytes);
+		if (input)
+			xorb_64(output, input, output, bytes);
+		return;
+	} else {
 		size_t bs = k_bc_get_blocksize(c->blockcipher);
 
 		if (c->have_partial_block) {
@@ -169,7 +173,9 @@ __export_function void k_sc_update
 
 			uint8_t first_block_out[bs];
 			memset(first_block_out, 0, bs);
-			memcpy(c->partial_block+c->partial_bytes, input, b);
+			if (input)
+				memcpy(c->partial_block+c->partial_bytes,
+					input, b);
 
 			c->partial_remaining -= b;
 
@@ -178,8 +184,8 @@ __export_function void k_sc_update
 				memcpy(c->old_iv, o, bs);
 			}
 
-			k_bcmode_update(c->blockcipher, c->partial_block,
-				first_block_out, 1);
+			k_bcmode_update(c->blockcipher, input ?
+				c->partial_block : 0, first_block_out, 1);
 
 			if (c->partial_remaining) {
 				k_bcmode_set_iv(c->blockcipher, c->old_iv);
@@ -189,7 +195,8 @@ __export_function void k_sc_update
 			c->partial_bytes += b;
 
 			bytes -= b;
-			input += b;
+			if (input)
+				input += b;
 			output += b;
 
 			if (!c->partial_remaining) {
@@ -209,9 +216,10 @@ __export_function void k_sc_update
 
 			memset(c->partial_block, 0, bs);
 			memset(last_block_out, 0, bs);
-			memcpy(c->partial_block, input+bytes-rem, rem);
-			k_bcmode_update(c->blockcipher, c->partial_block,
-				last_block_out, 1);
+			if (input)
+				memcpy(c->partial_block, input+bytes-rem, rem);
+			k_bcmode_update(c->blockcipher, input ?
+				c->partial_block : 0, last_block_out, 1);
 			memcpy(output+bytes-rem, last_block_out, rem);
 			c->partial_bytes = rem;
 			c->partial_remaining = bs - rem;

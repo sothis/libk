@@ -58,7 +58,6 @@ struct prng_desc {
 /* internal context structure for public apis */
 struct k_prng_t {
 	const struct prng_desc*		prng;
-	k_sc_t*				streamcipher;
 	void*				ctx;
 	size_t				alloced_ctxsize;
 

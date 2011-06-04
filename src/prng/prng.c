@@ -84,19 +84,6 @@ k_prng_init_err:
 	return NULL;
 }
 
-__export_function struct k_prng_t* k_prng_init_with_streamcipher
-(k_sc_t* streamcipher)
-{
-	struct k_prng_t* c = 0;
-
-	c = k_prng_init(PRNG_NOOP);
-	if (!c)
-		return NULL;
-	c->streamcipher = streamcipher;
-
-	return c;
-}
-
 __export_function void k_prng_finish
 (struct k_prng_t* c)
 {
@@ -116,33 +103,23 @@ __export_function void k_prng_finish
 __export_function void k_prng_set_seed
 (struct k_prng_t* c, const void* seed, size_t seed_bytes)
 {
-	if (c->prng && c->prng->init)
+	if (c->prng->init)
 		c->prng->init(c->ctx, seed, seed_bytes);
 }
 
 __export_function void k_prng_update
 (struct k_prng_t* c, void* output, size_t bytes)
 {
-	if (c->prng) {
-		size_t word_bytes = c->prng->word_size / 8;
-		size_t i = bytes / word_bytes;
-		size_t rem = bytes % word_bytes;
-		for (size_t l = 0; l < i; ++l)
-			c->prng->update(c->ctx, output + (l*word_bytes));
-		if (rem) {
-			uint8_t last_block[word_bytes];
-			memset(last_block, 0, word_bytes);
-			c->prng->update(c->ctx, last_block);
-			memcpy(output+bytes-rem, last_block, rem);
-		}
-	}
-	if (c->streamcipher) {
-		/* TODO: only pure streamciphers and blockciphers operating
-		 * 	 in CTR or OFB are suitable as csprngs (i.e. when
-		 * 	 omitting the plaintext xoring) -> either use null-byte
-		 * 	 arrays as input, so xoring has no effect, or introduce
-		 * 	 an api which outputs the raw keystream
-		 */
+	size_t word_bytes = c->prng->word_size / 8;
+	size_t i = bytes / word_bytes;
+	size_t rem = bytes % word_bytes;
+	for (size_t l = 0; l < i; ++l)
+		c->prng->update(c->ctx, output + (l*word_bytes));
+	if (rem) {
+		uint8_t last_block[word_bytes];
+		memset(last_block, 0, word_bytes);
+		c->prng->update(c->ctx, last_block);
+		memcpy(output+bytes-rem, last_block, rem);
 	}
 }
 

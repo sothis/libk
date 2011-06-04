@@ -19,9 +19,6 @@ typedef struct k_prng_t k_prng_t;
 extern k_prng_t* k_prng_init
 (enum prng_e prng);
 
-extern k_prng_t* k_prng_init_with_streamcipher
-(k_sc_t* streamcipher);
-
 extern void k_prng_finish
 (k_prng_t* c);
 

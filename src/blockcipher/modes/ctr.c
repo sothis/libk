@@ -22,10 +22,12 @@ static void ctr_crypt
 	uint8_t* iv_ctr = iv + bs - sizeof(uint64_t);
 	uint64_t ctr = _get_uint64_l(iv_ctr);
 
-	memcpy(b, i, bs);
+	if (i)
+		memcpy(b, i, bs);
 
 	m->blockcipher->encrypt(m->schedule, iv, o);
-	xorb_64(o, o, b, bs);
+	if (i)
+		xorb_64(o, o, b, bs);
 	ctr++;
 	_put_uint64_l(iv_ctr, ctr);
 }

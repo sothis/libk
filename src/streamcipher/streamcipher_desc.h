@@ -24,7 +24,6 @@ typedef void (*sc_init_fn)(
 
 typedef void (*sc_update_fn)(
 	void*		state,
-	const void*	input,
 	void*		output,
 	size_t		length
 );
