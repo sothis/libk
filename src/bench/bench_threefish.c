@@ -28,6 +28,10 @@ bcmode_perftest(tf512_ctr_ek, "Threefish 512 CTR Keystream",
 	BLK_CIPHER_THREEFISH_512, BLK_CIPHER_MODE_CTR,
 	BLK_CIPHER_KEY_ENCRYPT, 512, 0);
 
+bcmode_perftest(tf512_ofb_ek, "Threefish 512 OFB Keystream",
+	BLK_CIPHER_THREEFISH_512, BLK_CIPHER_MODE_OFB,
+	BLK_CIPHER_KEY_ENCRYPT, 512, 0);
+
 bcmode_perftest(tf1024_ctr_ek, "Threefish 1024 CTR Keystream",
 	BLK_CIPHER_THREEFISH_1024,BLK_CIPHER_MODE_CTR,
 	BLK_CIPHER_KEY_ENCRYPT, 1024, 0);

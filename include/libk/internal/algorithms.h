@@ -38,14 +38,6 @@ enum bcmode_e {
 	BLK_CIPHER_MODE_MAX_SUPPORT		= BLK_CIPHER_MODE_CTR
 };
 
-/* if the blockcipher mode turns the block cipher into a stream cipher
- * i.e. no padding is required and decryption uses encrypt transform,
- * add the mode below */
-enum bcstreammode_e {
-	BLK_CIPHER_STREAMMODE_OFB		= BLK_CIPHER_MODE_OFB,
-	BLK_CIPHER_STREAMMODE_CTR		= BLK_CIPHER_MODE_CTR,
-};
-
 enum streamcipher_e {
 	STREAM_CIPHER_NOOP			= 0,
 	STREAM_CIPHER_ARC4			= 1,

@@ -25,9 +25,9 @@ namespace nlibk
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
 			internal static extern UIntPtr k_sc_init(StreamcipherKind cipher);
 
-			/* k_sc_t* k_sc_init_with_blockcipher(enum blockcipher_e cipher, enum bcstreammode_e mode, size_t max_workers); */
+			/* k_sc_t* k_sc_init_with_blockcipher(enum blockcipher_e cipher, enum bcmode_e mode, size_t max_workers); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
-			internal static extern UIntPtr k_sc_init_with_blockcipher(BlockcipherKind cipher, BlockcipherStreamModeKind mode, UIntPtr max_workers);
+			internal static extern UIntPtr k_sc_init_with_blockcipher(BlockcipherKind cipher, BlockcipherModeKind mode, UIntPtr max_workers);
 
 			/* void k_sc_finish(k_sc_t* c); */
 			[DllImport("libk", CallingConvention = CallingConvention.Cdecl)]
@@ -60,7 +60,7 @@ namespace nlibk
 				UnmanagedError.ThrowLastError();
 		}
 
-		public Streamcipher(BlockcipherKind algorithm, BlockcipherStreamModeKind mode, int max_workers)
+		public Streamcipher(BlockcipherKind algorithm, BlockcipherModeKind mode, int max_workers)
 		{
 			if (UnmanagedError.RegisterThread() != ErrorKind.K_ESUCCESS)
 				throw new Exception("unable to register libk error handler");
@@ -68,7 +68,7 @@ namespace nlibk
 				UnmanagedError.ThrowLastError();
 		}
 
-		public Streamcipher(BlockcipherKind algorithm, BlockcipherStreamModeKind mode) :
+		public Streamcipher(BlockcipherKind algorithm, BlockcipherModeKind mode) :
 			this(algorithm, mode, 0)
 		{}
 

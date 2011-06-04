@@ -18,7 +18,7 @@ namespace nktool
 		{
 			return new TestBlockStreamcipherThroughput {
 				cipherkind = BlockcipherKind.Threefish256,
-				streammode = BlockcipherStreamModeKind.Counter,
+				streammode = BlockcipherModeKind.Counter,
 				keybits = 256,
 				megabytes = 128
 			}.Run();
@@ -28,7 +28,7 @@ namespace nktool
 		{
 			return new TestBlockStreamcipherThroughput {
 				cipherkind = BlockcipherKind.Threefish512,
-				streammode = BlockcipherStreamModeKind.Counter,
+				streammode = BlockcipherModeKind.Counter,
 				keybits = 512,
 				megabytes = 128
 			}.Run();
@@ -38,7 +38,7 @@ namespace nktool
 		{
 			return new TestBlockStreamcipherThroughput {
 				cipherkind = BlockcipherKind.Threefish1024,
-				streammode = BlockcipherStreamModeKind.Counter,
+				streammode = BlockcipherModeKind.Counter,
 				keybits = 1024,
 				megabytes = 128
 			}.Run();

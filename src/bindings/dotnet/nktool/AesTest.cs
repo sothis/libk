@@ -196,7 +196,7 @@ namespace nktool
 		{
 			return new TestBlockStreamcipherThroughput {
 				cipherkind = BlockcipherKind.AES,
-				streammode = BlockcipherStreamModeKind.Counter,
+				streammode = BlockcipherModeKind.Counter,
 				keybits = 128,
 				megabytes = 128
 			}.Run();
@@ -206,7 +206,7 @@ namespace nktool
 		{
 			return new TestBlockStreamcipherThroughput {
 				cipherkind = BlockcipherKind.AES,
-				streammode = BlockcipherStreamModeKind.Counter,
+				streammode = BlockcipherModeKind.Counter,
 				keybits = 192,
 				megabytes = 128
 			}.Run();

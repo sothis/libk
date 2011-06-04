@@ -38,12 +38,6 @@ namespace nlibk
 		Counter			= 5,
 	};
 
-	public enum BlockcipherStreamModeKind
-	{
-		OutputFeedback		= BlockcipherModeKind.OutputFeedback,
-		Counter			= BlockcipherModeKind.Counter,
-	};
-
 	public enum HashKind
 	{
 		Skein256		= 1,

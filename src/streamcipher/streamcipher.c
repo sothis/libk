@@ -65,10 +65,18 @@ k_sc_init_err:
 }
 
 __export_function struct k_sc_t* k_sc_init_with_blockcipher
-(enum blockcipher_e cipher, enum bcstreammode_e mode, size_t max_workers)
+(enum blockcipher_e cipher, enum bcmode_e mode, size_t max_workers)
 {
 	enum k_error_e err = K_ESUCCESS;
 	struct k_sc_t* c = 0;
+
+	int32_t r = k_bcmode_produces_keystream(mode);
+	if (r < 0)
+		goto k_sc_init_err;
+	if (!r) {
+		err = K_EINVMODE;
+		goto k_sc_init_err;
+	}
 
 	c = k_sc_init(STREAM_CIPHER_NOOP);
 	if (!c)

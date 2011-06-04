@@ -61,6 +61,7 @@ blockciphermode_start(CTR, "Counter")
 	.decrypt_uses_encrypt_transform	= 1,
 	.encrypt_parallelizable		= 1,
 	.decrypt_parallelizable		= 1,
+	.keystream_precomputable	= 1,
 	.prepare_iv			= &ctr_prepare_worker_ivs,
 	.encrypt			= &ctr_crypt,
 	.decrypt			= &ctr_crypt,

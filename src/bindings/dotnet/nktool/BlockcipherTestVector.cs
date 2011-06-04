@@ -96,7 +96,7 @@ namespace nktool
 			byte[] ciphertext = null;
 			byte[] plaintext = null;
 
-			using (Streamcipher cipher = new Streamcipher(Cipher, (BlockcipherStreamModeKind)Mode)) {
+			using (Streamcipher cipher = new Streamcipher(Cipher, Mode)) {
 				cipher.SetNonce(_iv);
 				cipher.SetKey(_key);
 				ciphertext = new byte[_plaintext.Length];

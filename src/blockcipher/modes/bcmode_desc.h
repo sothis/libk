@@ -54,6 +54,12 @@ struct bcmode_desc {
 	/* set this flag if the mode decryption requires the encryption key
 	 * to be set */
 	const uint32_t			decrypt_uses_encrypt_transform;
+	/* set this flag if the mode generates a keystream, which can be
+	 * precomputed, i.e. xoring against plaintext can be omitted because
+	 * the mode does not depend on the result of the mode for the next
+	 * block. this allows the mode to be used as a streamcipher or a
+	 * csprng. */
+	const uint32_t			keystream_precomputable;
 
 	const uint32_t			encrypt_parallelizable;
 	const uint32_t			decrypt_parallelizable;

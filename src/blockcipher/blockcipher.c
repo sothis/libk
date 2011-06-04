@@ -195,6 +195,24 @@ k_bc_set_mode_err:
 	return -1;
 }
 
+__export_function int32_t k_bcmode_produces_keystream
+(enum bcmode_e mode)
+{
+	enum k_error_e err = K_ESUCCESS;
+
+	const struct bcmode_desc* m = k_bcmode_get_by_id(mode);
+	if (!m) {
+		err = K_ENOMODE;
+		goto k_bcmode_produces_keystream_err;
+	}
+
+	return m->keystream_precomputable;
+
+k_bcmode_produces_keystream_err:
+	k_error(err);
+	return -1;
+}
+
 __export_function void k_bc_finish
 (struct k_bc_t* c)
 {

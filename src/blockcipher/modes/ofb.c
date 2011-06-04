@@ -37,6 +37,7 @@ static const char* const authors[] = {
 blockciphermode_start(OFB, "Output Feedback")
 	.authors			= authors,
 	.decrypt_uses_encrypt_transform	= 1,
+	.keystream_precomputable	= 1,
 	.encrypt			= &ofb_crypt,
 	.decrypt			= &ofb_crypt,
 blockciphermode_end

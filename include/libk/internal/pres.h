@@ -170,7 +170,7 @@ struct pres_options_t {
 	/* optional, ignored if a streamcipher is set */
 	enum blockcipher_e blockcipher;
 	/* optional, ignored if a streamcipher is set */
-	enum bcstreammode_e ciphermode;
+	enum bcmode_e ciphermode;
 
 	/* optional, if 0 (i.e. not set, then the statesize of the selected
 	 * hashsum will be used */

@@ -145,7 +145,7 @@ static int import_directory
 
 	if (pass) {
 		o.blockcipher = BLK_CIPHER_THREEFISH_1024;
-		o.ciphermode = BLK_CIPHER_STREAMMODE_CTR;
+		o.ciphermode = BLK_CIPHER_MODE_CTR;
 		o.keysize = 1024;
 		o.pass = pass;
 	}

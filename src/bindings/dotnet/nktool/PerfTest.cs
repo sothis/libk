@@ -107,7 +107,7 @@ namespace nktool
 	public class TestBlockStreamcipherThroughput
 	{
 		public BlockcipherKind cipherkind;
-		public BlockcipherStreamModeKind streammode;
+		public BlockcipherModeKind streammode;
 		public int keybits;
 		public int megabytes;
 
