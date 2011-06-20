@@ -93,7 +93,7 @@ __export_function struct k_sc_t* k_sc_init_with_blockcipher
 		goto k_sc_init_err;
 
 	size_t bs = k_bc_get_blocksize(c->blockcipher);
-	c->noncesize = bs/8;
+	c->noncesize = bs*8;
 
 	c->partial_block = k_calloc(1, bs);
 	if (!c->partial_block) {
