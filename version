@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DEFAULT_VERSION=v0.2.5
+DEFAULT_VERSION=v0.3.0
 
 if test -d .git -o -f .git &&
 	VN=$(git describe --tags --abbrev=4 --dirty 2>/dev/null)
