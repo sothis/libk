@@ -157,6 +157,7 @@ struct pres_file_t {
 
 struct pres_res_t {
 	struct mmap_t	map;
+	uint64_t	uuid;
 	uint64_t	absoff;
 	uint64_t	size;
 	k_sc_t*		scipher;
@@ -257,6 +258,9 @@ extern int k_pres_commit_new_resource
 extern int k_pres_add_file
 (struct pres_file_t* pf, const char* name, size_t basename_off, uint64_t uuid);
 
+extern int k_pres_repack
+(struct pres_file_t* old, const char* filename, const char* pass);
+
 
 
 extern uint64_t k_pres_res_count
@@ -280,6 +284,9 @@ extern int k_pres_res_open
 (struct pres_file_t* pf, struct pres_res_t* res, uint64_t id);
 
 extern uint64_t k_pres_res_size
+(struct pres_res_t* res);
+
+extern uint64_t k_pres_res_uuid
 (struct pres_res_t* res);
 
 extern void* k_pres_res_map

@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <inttypes.h>
 
 #ifndef __WINNT__
 #define MKDIR_MODE ,0700
@@ -77,7 +78,7 @@ static void __init(void)
 }
 
 static struct pres_file_t* _open_pres_container
-(const char* filename, int writable)
+(const char* filename, int writable, char** passout)
 {
 	struct pres_file_t* p = malloc(sizeof(struct pres_file_t));
 	if (!p)
@@ -104,8 +105,10 @@ err_out:
 		p = 0;
 	}
 out:
-	if (pass)
+	if (pass && !passout)
 		free(pass);
+	else if (pass && passout)
+		*passout = pass;
 	return p;
 }
 
@@ -213,7 +216,7 @@ static int add_file
 (const char* container, const char* filename, const char* pass)
 {
 	int r, res = 0;
-	struct pres_file_t* p = _open_pres_container(container, 1);
+	struct pres_file_t* p = _open_pres_container(container, 1, 0);
 	if (!p)
 		goto err_out;
 
@@ -243,7 +246,7 @@ out:
 static int export_all(const char* filename, const char* dir)
 {
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename, 0);
+	struct pres_file_t* p = _open_pres_container(filename, 0, 0);
 
 	if (!p)
 		goto err_out;
@@ -254,9 +257,9 @@ static int export_all(const char* filename, const char* dir)
 		goto err_out;
 
 	uint64_t e = k_pres_res_count(p);
-	printf("exporting %lu items from '%s' ...\n", (long)e, filename);
+	printf("exporting %"PRIu64" items from '%s' ...\n", e, filename);
 
-	for (long i = 1; i <= e; ++i) {
+	for (uint64_t i = 1; i <= e; ++i) {
 		k_pres_export_id(p, i, 1);
 	}
 
@@ -276,7 +279,7 @@ static int export_id(const char* filename, const char* dir, uint64_t id)
 {
 	const char* basename;
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename, 0);
+	struct pres_file_t* p = _open_pres_container(filename, 0, 0);
 
 	if (!p)
 		goto err_out;
@@ -310,7 +313,7 @@ out:
 static int delete_id(const char* filename, uint64_t id)
 {
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename, 1);
+	struct pres_file_t* p = _open_pres_container(filename, 1, 0);
 	if (!p)
 		goto err_out;
 
@@ -341,7 +344,7 @@ out:
 static int list_all(const char* filename)
 {
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename, 0);
+	struct pres_file_t* p = _open_pres_container(filename, 0, 0);
 
 	if (!p)
 		goto err_out;
@@ -362,6 +365,29 @@ out:
 	return res;
 }
 
+static int repack(const char* filename)
+{
+	int res = 0;
+	char* pass = 0;
+	struct pres_file_t* p = _open_pres_container(filename, 0, &pass);
+
+	if (!p)
+		goto err_out;
+
+	res = k_pres_repack(p, filename, pass);
+
+	goto out;
+err_out:
+	perror("repack");
+	res = -1;
+out:
+	if (pass)
+		free(pass);
+	if (p)
+		_close_pres_container(p);
+	return res;
+}
+
 static void print_help(void)
 {
 	k_print_version();
@@ -371,6 +397,8 @@ static void print_help(void)
 		"- run benchmarks\n");
 	fprintf(stderr, " ktool ls    <inpres>                " \
 		"- list contents of pres container\n");
+	fprintf(stderr, " ktool rep   <inpres>                " \
+		"- prune deleted resources\n");
 	fprintf(stderr, " ktool imp   <indir>  <outpres>      " \
 		"- import directory to new pres container\n");
 	fprintf(stderr, " ktool add   <inpres> <infile>       " \
@@ -432,6 +460,8 @@ int main(int argc, char* argv[], char* envp[])
 		return delete_id(argv[2], strtoull(argv[3], 0, 10));
 	if (!strcmp(argv[1], "ls") && (argc > 2))
 		return list_all(argv[2]);
+	if (!strcmp(argv[1], "rep") && (argc > 2))
+		return repack(argv[2]);
 	if (!strcmp(argv[1], "test")) {
 		int failed = k_run_unittests(1);
 		if (failed)

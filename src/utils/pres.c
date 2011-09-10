@@ -1135,6 +1135,7 @@ __export_function int k_pres_res_open
 	if (!table[id-1].id)
 		return -1;
 
+	res->uuid = table[id-1].uuid;
 	res->size = table[id-1].data_size;
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
@@ -1150,6 +1151,13 @@ __export_function uint64_t k_pres_res_size
 (struct pres_res_t* res)
 {
 	return res->size;
+}
+
+
+__export_function uint64_t k_pres_res_uuid
+(struct pres_res_t* res)
+{
+	return res->uuid;
 }
 
 __export_function void* k_pres_res_map
@@ -1337,5 +1345,49 @@ __export_function int k_pres_export_id
 		return -1;
 	}
 
+	return 0;
+}
+
+__export_function int k_pres_repack
+(struct pres_file_t* old, const char* filename, const char* pass)
+{
+	struct pres_file_t new;
+
+	struct pres_options_t o = {
+		.name		= filename,
+		.hashsum 	= old->hdr.hashfunction,
+	};
+
+	if (pass) {
+		o.blockcipher = old->hdr.cipher;
+		o.ciphermode = old->hdr.ciphermode;
+		o.keysize = old->hdr.keysize;
+		o.pass = pass;
+	}
+
+	if (k_pres_create(&new, &o)) {
+		perror("k_pres_create");
+		goto err_out;
+	}
+
+	uint64_t e = k_pres_res_count(old);
+	for (uint64_t i = 1; i <= e; ++i) {
+		struct pres_res_t r;
+		/* skipping deleted items here */
+		if (k_pres_res_open(old, &r, i))
+			continue;
+	}
+
+	k_pres_add_file(&new, "libk/Makefile", 5, 0);
+
+	if (k_pres_close(&new)) {
+		perror("k_pres_close new");
+		goto err_out;
+	}
+
+	goto out;
+err_out:
+	return -1;
+out:
 	return 0;
 }
