@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "utils/sections.h"
+#include "utils/mem.h"
 
 __export_function void* _k_key_derive_simple1024
 (	const char*	pass,
@@ -24,14 +25,14 @@ __export_function void* _k_key_derive_simple1024
 	size_t sp = strlen(pass);
 	size_t digestbytes = k_hash_digest_bytes(h);
 
-	void* inp = malloc(sp+digestbytes);
+	void* inp = k_malloc(sp+digestbytes);
 	if (!inp) {
 		k_hash_finish(h);
 		return 0;
 	}
-	void* outp = malloc(digestbytes);
+	void* outp = k_malloc(digestbytes);
 	if (!outp) {
-		free(inp);
+		k_free(inp);
 		k_hash_finish(h);
 		return 0;
 	}
@@ -41,7 +42,7 @@ __export_function void* _k_key_derive_simple1024
 
 	k_hash_update(h, inp, sp+digestbytes);
 	k_hash_final(h, outp);
-	free(inp);
+	k_free(inp);
 
 	for (uint64_t i = 0; i < iter; ++i) {
 		k_hash_reset(h);

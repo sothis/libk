@@ -827,7 +827,7 @@ __export_function int k_pres_open
 	}
 
 	res = _pres_open_key(pf, name, key, writable);
-	free(key);
+	k_free(key);
 	return res;
 }
 
