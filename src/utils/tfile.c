@@ -133,7 +133,7 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 
 	if (fchmod(tf->fd, tf->mode))
 		goto err;
-#if 0
+#if 1
 	/* TODO: make this optional */
 	if (fsync(tf->fd))
 		goto err;
@@ -302,6 +302,9 @@ __export_function int k_tcommit_and_close(int fd)
 			return tcommit_one(&openfiles[i],
 				i*sizeof(struct tfile_t));
 	}
+	/* fd wasn't opened by tcreat(), simply close it */
+	fsync(fd);
+	close(fd);
 	return 0;
 }
 
@@ -318,4 +321,7 @@ __export_function void k_trollback_and_close(int fd)
 			return trollback_one(&openfiles[i],
 				i*sizeof(struct tfile_t));
 	}
+	/* fd wasn't opened by tcreat(), simply close it */
+	fsync(fd);
+	close(fd);
 }

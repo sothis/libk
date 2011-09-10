@@ -834,7 +834,9 @@ __export_function int k_pres_create
 	}
 
 #ifdef NDEBUG
-	pf->fd = k_tcreat(opt->name, 0400);
+	/* make this optional */
+	/* pf->fd = k_tcreat(opt->name, 0400); */
+	pf->fd = k_tcreat(opt->name, 0600);
 #else
 	pf->fd = k_tcreat(opt->name, 0600);
 #endif
