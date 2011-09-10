@@ -777,6 +777,7 @@ failed:
 		pool_free(&pf->stringpool);
 	if (pf->fd != -1)
 		close(pf->fd);
+	memset(pf, 0, sizeof(struct pres_file_t));
 	return -1;
 }
 
@@ -953,6 +954,7 @@ err_out:
 		free(pf->rtbl);
 	if (pf->key)
 		k_free(pf->key);
+	memset(pf, 0, sizeof(struct pres_file_t));
 	return -1;
 }
 
