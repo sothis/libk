@@ -286,7 +286,7 @@ static int export_id(const char* filename, const char* dir, uint64_t id)
 
 	uint64_t e = k_pres_res_count(p);
 	if (!id || (id > e)) {
-		printf("invalid id: %lu\n", id);
+		printf("invalid id: %"PRIu64"\n", id);
 		goto err_out;
 	}
 
@@ -295,7 +295,7 @@ static int export_id(const char* filename, const char* dir, uint64_t id)
 		goto err_out;
 
 	k_pres_res_name_by_id(p, id, &basename);
-	printf("exporting %lu:\t'%s'\n", (long)id, basename);
+	printf("exporting %"PRIu64":\t'%s'\n", id, basename);
 
 	if (k_pres_export_id(p, id, 0))
 		goto err_out;
@@ -319,17 +319,17 @@ static int delete_id(const char* filename, uint64_t id)
 
 	uint64_t e = k_pres_res_count(p);
 	if (!id || (id > e)) {
-		printf("invalid id: %lu\n", id);
+		printf("invalid id: %"PRIu64"\n", id);
 		goto err_out;
 	}
 
 	const char* name = k_pres_res_name_by_id(p, id, 0);
 	if (!strlen(name)) {
-		printf("%lu is already deleted\n", id);
+		printf("%"PRIu64" is already deleted\n", id);
 		goto out;
 	}
 	k_pres_delete_id(p, id);
-	printf("deleted %lu:\t'%s'\n", id, name);
+	printf("deleted %"PRIu64":\t'%s'\n", id, name);
 
 	goto out;
 err_out:
@@ -350,9 +350,9 @@ static int list_all(const char* filename)
 		goto err_out;
 
 	uint64_t e = k_pres_res_count(p);
-	for (long i = 1; i <= e; ++i) {
+	for (uint64_t i = 1; i <= e; ++i) {
 		const char* name = k_pres_res_name_by_id(p, i, 0);
-		printf("%lu:\t'%s'\n", i, name);
+		printf("%"PRIu64":\t'%s'\n", i, name);
 	}
 
 	goto out;
