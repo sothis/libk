@@ -76,7 +76,7 @@ static int pres_rollback(struct pres_file_t* pf, size_t ssize)
 }
 
 __export_function int k_pres_add_file
-(struct pres_file_t* pf, const char* name, size_t basename_off)
+(struct pres_file_t* pf, const char* name, size_t basename_off, uint64_t uuid)
 {
 	int res = 0, fd = -1;
 	size_t filebytes = 0;
@@ -194,6 +194,7 @@ __export_function int k_pres_add_file
 		pf->rtbl->table[pf->cur_resentries-1].filename_digest);
 
 	pf->rtbl->table[pf->cur_resentries-1].id = pf->cur_resentries;
+	pf->rtbl->table[pf->cur_resentries-1].uuid = uuid;
 	pf->rtbl->table[pf->cur_resentries-1].data_size = filebytes;
 	pf->rtbl->table[pf->cur_resentries-1].data_offset =
 		pf->cur_datapoolsize;

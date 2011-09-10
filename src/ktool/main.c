@@ -125,7 +125,8 @@ ft_walk(const char* path, size_t baseoff)
 {
 	int r;
 
-	if ((r = k_pres_add_file(&_cur_pres, path, baseoff)) != 0) {
+	/* we don't need uuids in this usage case, therefore set them to 0 */
+	if ((r = k_pres_add_file(&_cur_pres, path, baseoff, 0)) != 0) {
 		if (r == 1)
 			printf("skipped: '%s'\n", path);
 		if (r == -1) {
@@ -188,6 +189,26 @@ static int import_directory
 	return 0;
 }
 
+static size_t get_basename_offset(const char* filename)
+{
+	const char* c;
+	size_t b = 0, s = strlen(filename);
+
+	if (!s)
+		return 0;
+
+	c = filename + s - 1;
+
+	while ((*c != '/') && (*c != '\\')) {
+		++b;
+		--c;
+		if (b == s)
+			break;
+	}
+	b = s - b;
+	return b;
+}
+
 static int add_file
 (const char* container, const char* filename, const char* pass)
 {
@@ -195,8 +216,10 @@ static int add_file
 	struct pres_file_t* p = _open_pres_container(container, 1);
 	if (!p)
 		goto err_out;
-	/* TODO: determine basename offset */
-	if ((r = k_pres_add_file(p, filename, 0)) != 0) {
+
+	size_t b = get_basename_offset(filename);
+	/* we don't need uuids in this usage case, therefore set them to 0 */
+	if ((r = k_pres_add_file(p, filename, b, 0)) != 0) {
 		if (r == 1)
 			printf("skipped: '%s'.\n", filename);
 		if (r == -1) {

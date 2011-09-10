@@ -18,7 +18,7 @@
 
 /* NOTE: _every_ change in the on-disk structures have to result in a
  * version change */
-#define PRES_VER		0x00000002u
+#define PRES_VER		0x00000003u
 #define PRES_MAGIC		0x0701198123421337ull
 #define PRES_MAX_DIGEST_LENGTH	128
 #define PRES_MAX_IV_LENGTH	128
@@ -86,7 +86,9 @@ struct pres_detached_header_t {
 } __attribute__((packed));
 
 struct pres_resource_table_entry_t {
+	/* the uuid won't change across repacks. the id does. */
 	uint64_t	id;
+	uint64_t	uuid;
 	uint64_t	basename_offset;
 
 	/* relative pointer into string pool */
@@ -224,7 +226,7 @@ extern int k_pres_create
  * returns -1 if an unrecoverable error occured, the container might be
  * 		corrupt */
 extern int k_pres_add_file
-(struct pres_file_t* pf, const char* name, size_t basename_off);
+(struct pres_file_t* pf, const char* name, size_t basename_off, uint64_t uuid);
 
 /* closes the container and commits changes. if an error occurs closes and
  * unlinks the temporary file. if the contatiner was marked as corrupt by
