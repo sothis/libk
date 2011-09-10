@@ -175,7 +175,7 @@ __export_function int k_pres_add_file
 			goto unrecoverable_err;
 		goto recoverable_err;
 	}
-#if 0
+#if 1
 	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
@@ -670,7 +670,8 @@ static int _pres_open_key
 	if (!pf->iobuf)
 		goto failed;
 
-	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
+	if (lseek(pf->fd, pf->cur_datapoolstart+pf->cur_datapoolsize,
+	SEEK_SET) == -1)
 		goto failed;
 
 	pf->is_open = 1;

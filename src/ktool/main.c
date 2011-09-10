@@ -191,15 +191,24 @@ static int import_directory
 static int add_file
 (const char* container, const char* filename, const char* pass)
 {
-	int res = 0;
+	int r, res = 0;
 	struct pres_file_t* p = _open_pres_container(container, 1);
 	if (!p)
 		goto err_out;
-
+	/* TODO: determine basename offset */
+	if ((r = k_pres_add_file(p, filename, 0)) != 0) {
+		if (r == 1)
+			printf("skipped: '%s'\n", filename);
+		if (r == -1) {
+			perror("pres_add_file");
+			return -1;
+		}
+	}
+	printf("added '%s'.\n", filename);
 
 	goto out;
 err_out:
-	perror("exportid");
+	perror("add_file");
 	res = -1;
 out:
 	if (p)
@@ -247,6 +256,12 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 
 	if (!p)
 		goto err_out;
+
+	uint64_t e = k_pres_res_count(p);
+	if (!id || (id > e)) {
+		printf("invalid id: %lu\n", id);
+		goto err_out;
+	}
 
 	mkdir(dir MKDIR_MODE);
 	if (chdir(dir))
