@@ -18,13 +18,13 @@
 
 /* NOTE: _every_ change in the on-disk structures have to result in a
  * version change */
-#define PRES_VER		0x00000003u
-#define PRES_MAGIC		0x0701198123421337ull
-#define PRES_MAX_DIGEST_LENGTH	128
-#define PRES_MAX_IV_LENGTH	128
-#define PRES_MAX_SIG_LENGTH	32768
-#define PRES_IOBUF_SIZE		4*1024*1024
-#define PRES_KDF_ITERATIONS	100000
+#define PRES_VER		(0x00000003u)
+#define PRES_MAGIC		(0x0701198123421337ull)
+#define PRES_MAX_DIGEST_LENGTH	(128ull)
+#define PRES_MAX_IV_LENGTH	(128ull)
+#define PRES_MAX_SIG_LENGTH	(32768ull)
+#define PRES_IOBUF_SIZE		(4ull*1024ull*1024ull)
+#define PRES_KDF_ITERATIONS	(100000ull)
 
 
 /*
@@ -253,8 +253,11 @@ extern const char* k_pres_res_name_by_id
 extern uint64_t k_pres_res_id_by_name
 (struct pres_file_t* pf, const char* name);
 
+extern uint64_t k_pres_res_id_by_uuid
+(struct pres_file_t* pf, uint64_t uuid);
 
-extern void k_pres_res_by_id
+
+extern int k_pres_res_open
 (struct pres_file_t* pf, struct pres_res_t* res, uint64_t id);
 
 extern uint64_t k_pres_res_size

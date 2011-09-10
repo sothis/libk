@@ -229,7 +229,7 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 __export_function int
 k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
-	int res;
+	int res = 0;
 	_ftw = ftw_fn;
 	/* stay within the same filesystem, do not follow symlinks */
 	res = nftw(path, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS);
