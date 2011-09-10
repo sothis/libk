@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <inttypes.h>
 
 #ifndef __WINNT__
 #include <sys/mman.h>
@@ -183,7 +184,7 @@ __export_function int k_pres_commit_new_resource
 
 	if (pool_append(&pf->stringpool, name, namelen))
 		goto unrecoverable_err;
-#if 1
+#if 0
 	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
@@ -1136,6 +1137,9 @@ __export_function int k_pres_res_open
 		return -1;
 
 	res->uuid = table[id-1].uuid;
+	res->name = pool_getmem(&pf->stringpool, table[id-1].filename_offset);
+	res->basename_offset = table[id-1].basename_offset;
+	res->digest = table[id-1].data_digest;
 	res->size = table[id-1].data_size;
 	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
@@ -1158,6 +1162,18 @@ __export_function uint64_t k_pres_res_uuid
 (struct pres_res_t* res)
 {
 	return res->uuid;
+}
+
+__export_function uint64_t k_pres_res_basename_offset
+(struct pres_res_t* res)
+{
+	return res->basename_offset;
+}
+
+__export_function const char* k_pres_res_name
+(struct pres_res_t* res)
+{
+	return res->name;
 }
 
 __export_function void* k_pres_res_map
@@ -1284,8 +1300,7 @@ __export_function int k_pres_export_id
 
 	k_hash_reset(pf->hash);
 	for (uint64_t i = 0; i < niter; ++i) {
-		void* m = k_pres_res_map(&r, mmap_window,
-			i*mmap_window);
+		void* m = k_pres_res_map(&r, mmap_window, i*mmap_window);
 		size_t total = 0;
 		ssize_t nwritten;
 		k_hash_update(pf->hash, m, mmap_window);
@@ -1305,8 +1320,7 @@ __export_function int k_pres_export_id
 		k_pres_res_unmap(&r);
 	}
 	if (nlast) {
-		void* m = k_pres_res_map(&r, nlast,
-			niter*mmap_window);
+		void* m = k_pres_res_map(&r, nlast, niter*mmap_window);
 		size_t total = 0;
 		ssize_t nwritten;
 		k_hash_update(pf->hash, m, nlast);
@@ -1329,9 +1343,9 @@ __export_function int k_pres_export_id
 	if (memcmp(pf->rtbl->table[id-1].data_digest, digest_chk,
 	digest_bytes)) {
 		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
-		fprintf(stderr, "data digest does not match\n");
+		fprintf(stderr, " data digest does not match\n");
 		dumphx("expected", pf->rtbl->table[id-1].data_digest,
-		digest_bytes);
+			digest_bytes);
 		dumphx("have", digest_chk, digest_bytes);
 		/* TODO: allow export of damaged data
 		 * when explicitly requested */
@@ -1348,9 +1362,73 @@ __export_function int k_pres_export_id
 	return 0;
 }
 
+static int _add_resource_to_new_pres
+(struct pres_file_t* pres, struct pres_res_t* res)
+{
+	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
+	int digest_bits = pres->hdr.hashsize;
+	size_t digest_bytes = (digest_bits + 7) / 8;
+	k_hash_t* h = k_hash_init(pres->hdr.hashfunction,
+		pres->hdr.hashsize);
+	if (!h)
+		goto err_out;
+
+	uint64_t uuid = k_pres_res_uuid(res);
+	uint64_t basename_offset = k_pres_res_basename_offset(res);
+	const char* name = k_pres_res_name(res);
+	uint64_t s = k_pres_res_size(res);
+
+	uint64_t mmap_window = PRES_IOBUF_SIZE;
+	size_t niter = s / mmap_window;
+	size_t nlast = s % mmap_window;
+
+	if (k_pres_init_new_resource(pres))
+		goto err_out;
+
+	k_hash_reset(h);
+	for (uint64_t i = 0; i < niter; ++i) {
+		void* m = k_pres_res_map(res, mmap_window, i*mmap_window);
+		if (k_pres_append_to_new_resource(pres, m, mmap_window)) {
+			k_pres_res_unmap(res);
+			goto err_out;
+		}
+		k_hash_update(h, m, mmap_window);
+		k_pres_res_unmap(res);
+	}
+	if (nlast) {
+		void* m = k_pres_res_map(res, nlast, niter*mmap_window);
+		if (k_pres_append_to_new_resource(pres, m, nlast)) {
+			k_pres_res_unmap(res);
+			goto err_out;
+		}
+		k_hash_update(h, m, nlast);
+		k_pres_res_unmap(res);
+	}
+	k_hash_final(h, digest_chk);
+	if (memcmp(res->digest, digest_chk, digest_bytes)) {
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", uuid, name);
+		fprintf(stderr, " data digest does not match\n");
+		dumphx("expected", res->digest, digest_bytes);
+		dumphx("have", digest_chk, digest_bytes);
+		goto err_out;
+	}
+
+	if (k_pres_commit_new_resource(pres, name, basename_offset, uuid))
+		goto err_out;
+
+	k_hash_finish(h);
+
+	return 0;
+err_out:
+	if (h)
+		k_hash_finish(h);
+	return -1;
+}
+
 __export_function int k_pres_repack
 (struct pres_file_t* old, const char* filename, const char* pass)
 {
+	int res = -1;
 	struct pres_file_t new;
 
 	struct pres_options_t o = {
@@ -1367,7 +1445,7 @@ __export_function int k_pres_repack
 
 	if (k_pres_create(&new, &o)) {
 		perror("k_pres_create");
-		goto err_out;
+		goto out;
 	}
 
 	uint64_t e = k_pres_res_count(old);
@@ -1376,18 +1454,21 @@ __export_function int k_pres_repack
 		/* skipping deleted items here */
 		if (k_pres_res_open(old, &r, i))
 			continue;
+		if (_add_resource_to_new_pres(&new, &r)) {
+			/* keep temporary filename on close,
+			 * get's deleted on process termination */
+			new.is_writable = 0;
+			k_pres_close(&new);
+			goto out;
+		}
 	}
-
-	k_pres_add_file(&new, "libk/Makefile", 5, 0);
 
 	if (k_pres_close(&new)) {
 		perror("k_pres_close new");
-		goto err_out;
+		goto out;
 	}
 
-	goto out;
-err_out:
-	return -1;
+	res = 0;
 out:
-	return 0;
+	return res;
 }

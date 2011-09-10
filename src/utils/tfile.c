@@ -133,7 +133,7 @@ static int tcommit_one(struct tfile_t* tf, size_t off)
 
 	if (fchmod(tf->fd, tf->mode))
 		goto err;
-#if 1
+#if 0
 	/* TODO: make this optional */
 	if (fsync(tf->fd))
 		goto err;

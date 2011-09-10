@@ -158,6 +158,9 @@ struct pres_file_t {
 struct pres_res_t {
 	struct mmap_t	map;
 	uint64_t	uuid;
+	const char*	name;
+	const uint8_t*	digest;
+	uint64_t	basename_offset;
 	uint64_t	absoff;
 	uint64_t	size;
 	k_sc_t*		scipher;
@@ -287,6 +290,12 @@ extern uint64_t k_pres_res_size
 (struct pres_res_t* res);
 
 extern uint64_t k_pres_res_uuid
+(struct pres_res_t* res);
+
+extern uint64_t k_pres_res_basename_offset
+(struct pres_res_t* res);
+
+extern const char* k_pres_res_name
 (struct pres_res_t* res);
 
 extern void* k_pres_res_map
