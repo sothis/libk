@@ -262,12 +262,15 @@ static void _cryptonce(k_sc_t* c, void* mem, const void* nonce, size_t s)
 }
 #endif
 
-static int _open_pres(const char* name)
+static int _open_pres(const char* name, uint32_t writable)
 {
 	struct stat st;
 	int fd = -1;
 
-	fd = open(name, O_RDONLY|O_NOATIME);
+	if (!writable)
+		fd = open(name, O_RDONLY|O_NOATIME);
+	else
+		fd = open(name, O_RDWR);
 	if (fd == -1)
 		goto failed;
 	if (fstat(fd, &st))
@@ -338,6 +341,8 @@ static int _verify_file_header(struct pres_file_t* pf)
 	if (dhdr_end > pf->hdr.filesize)
 		goto invalid;
 
+	pf->cur_filesize = pf->hdr.filesize;
+
 	return 0;
 
 invalid:
@@ -405,6 +410,8 @@ static int _get_detached_header(struct pres_file_t* pf)
 	if (_verify_detached_header(pf))
 		return -1;
 
+	pf->cur_rtbl_start = pf->dhdr.resource_table_start;
+
 	return 0;
 }
 
@@ -469,6 +476,9 @@ static int _get_rtbl_entries(struct pres_file_t* pf)
 
 	if (_verify_rtbl_entries(pf))
 		return -1;
+
+	pf->cur_allocedentries = pf->rtbl->entries;
+	pf->cur_resentries =  pf->rtbl->entries;
 
 	return 0;
 }
@@ -545,6 +555,11 @@ static int _get_rtbl(struct pres_file_t* pf)
 	if (_get_rtbl_entries(pf))
 		goto fail;
 
+	pf->cur_datapoolstart = pf->rtbl->data_pool_start;
+	pf->cur_datapoolsize = pf->rtbl->data_pool_size;
+	pf->cur_stringpoolstart = pf->rtbl->string_pool_start;
+	pf->cur_stringpoolsize = pf->rtbl->string_pool_size;
+
 	return 0;
 fail:
 	if (pf->rtbl) {
@@ -618,12 +633,12 @@ static int _get_stringpool(struct pres_file_t* pf)
 }
 
 static int _pres_open_key
-(struct pres_file_t* pf, const char* name, const void* key)
+(struct pres_file_t* pf, const char* name, const void* key, uint32_t writable)
 {
 	memset(pf, 0, sizeof(struct pres_file_t));
 	pf->fd = -1;
 
-	pf->fd = _open_pres(name);
+	pf->fd = _open_pres(name, writable);
 	if (pf->fd == -1)
 		goto failed;
 	if (_get_file_header(pf))
@@ -636,9 +651,13 @@ static int _pres_open_key
 			goto failed;
 		memcpy(pf->key, key, (pf->hdr.keysize+7)/8);
 		pf->scipher = _init_streamcipher(&pf->hdr);
+		pf->nonce_size = k_sc_get_nonce_bytes(pf->scipher);
 		if (!pf->scipher)
 			goto failed;
 	}
+	pf->prng = k_prng_init(PRNG_PLATFORM);
+	if (!pf->prng)
+		goto failed;
 
 	if (_get_detached_header(pf))
 		goto failed;
@@ -651,17 +670,27 @@ static int _pres_open_key
 	if (!pf->iobuf)
 		goto failed;
 
+	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
+		goto failed;
+
 	pf->is_open = 1;
+	pf->is_writable = writable;
 	return 0;
 failed:
 	if (pf->key)
 		k_free(pf->key);
 	if (pf->hash)
 		k_hash_finish(pf->hash);
+	if (pf->prng)
+		k_prng_finish(pf->prng);
 	if (pf->iobuf)
 		free(pf->iobuf);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
+	if (pf->rtbl)
+		free(pf->rtbl);
+	if (pf->stringpool.alloced)
+		pool_free(&pf->stringpool);
 	if (pf->fd != -1)
 		close(pf->fd);
 	return -1;
@@ -672,7 +701,7 @@ __export_function int k_pres_needs_pass(const char* name)
 	struct pres_file_t pf;
 	memset(&pf, 0, sizeof(struct pres_file_t));
 
-	pf.fd = _open_pres(name);
+	pf.fd = _open_pres(name, 0);
 	if (pf.fd == -1)
 		return -1;
 	if (_get_file_header(&pf)) {
@@ -688,29 +717,32 @@ __export_function int k_pres_needs_pass(const char* name)
 	return 0;
 }
 
+/* TODO: add k_pres_open variant with key instead of pass */
 __export_function int k_pres_open
-(struct pres_file_t* pf, const char* name, const char* pass)
+(struct pres_file_t* pf, const char* name, const char* pass, uint32_t writable)
 {
 	void* key = 0;
 	int res = -1;
 	memset(pf, 0, sizeof(struct pres_file_t));
 
-	pf->fd = _open_pres(name);
-	if (pf->fd == -1)
-		return -1;
-	if (_get_file_header(pf)) {
+	if (pass)  {
+		/* retrieve the kdf salt from the file */
+		pf->fd = _open_pres(name, 0);
+		if (pf->fd == -1)
+			return -1;
+		if (_get_file_header(pf)) {
+			close(pf->fd);
+			return -1;
+		}
 		close(pf->fd);
-		return -1;
-	}
-	close(pf->fd);
-	if (pf->hash)
-		k_hash_finish(pf->hash);
+		if (pf->hash)
+			k_hash_finish(pf->hash);
 
-	if (pass)
 		key = _k_key_derive_simple1024(pass,
 			pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
+	}
 
-	res = _pres_open_key(pf, name, key);
+	res = _pres_open_key(pf, name, key, writable);
 	free(key);
 	return res;
 }

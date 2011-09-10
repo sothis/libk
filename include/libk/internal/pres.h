@@ -236,7 +236,7 @@ extern int k_pres_close(struct pres_file_t* pf);
 
 /* opens existing container */
 extern int k_pres_open
-(struct pres_file_t* pf, const char* name, const char* pass);
+(struct pres_file_t* pf, const char* name, const char* pass, uint32_t writable);
 
 extern int k_pres_needs_pass(const char* name);
 

@@ -76,7 +76,8 @@ static void __init(void)
 #endif
 }
 
-static struct pres_file_t* _open_pres_container(const char* filename)
+static struct pres_file_t* _open_pres_container
+(const char* filename, int writable)
 {
 	struct pres_file_t* p = malloc(sizeof(struct pres_file_t));
 	if (!p)
@@ -93,7 +94,7 @@ static struct pres_file_t* _open_pres_container(const char* filename)
 			goto err_out;
 	}
 
-	if (k_pres_open(p, filename, pass))
+	if (k_pres_open(p, filename, pass, writable))
 		goto err_out;
 
 	goto out;
@@ -187,10 +188,29 @@ static int import_directory
 	return 0;
 }
 
+static int add_file
+(const char* container, const char* filename, const char* pass)
+{
+	int res = 0;
+	struct pres_file_t* p = _open_pres_container(container, 1);
+	if (!p)
+		goto err_out;
+
+
+	goto out;
+err_out:
+	perror("exportid");
+	res = -1;
+out:
+	if (p)
+		_close_pres_container(p);
+	return res;
+}
+
 static int export_all(const char* filename, const char* dir)
 {
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename);
+	struct pres_file_t* p = _open_pres_container(filename, 0);
 
 	if (!p)
 		goto err_out;
@@ -223,7 +243,7 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 {
 	const char* basename;
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename);
+	struct pres_file_t* p = _open_pres_container(filename, 0);
 
 	if (!p)
 		goto err_out;
@@ -251,7 +271,7 @@ out:
 static int list_all(const char* filename)
 {
 	int res = 0;
-	struct pres_file_t* p = _open_pres_container(filename);
+	struct pres_file_t* p = _open_pres_container(filename, 0);
 
 	if (!p)
 		goto err_out;
@@ -279,15 +299,17 @@ static void print_help(void)
 		"- run unittests\n");
 	fprintf(stderr, " ktool perf                          " \
 		"- run benchmarks\n");
-	fprintf(stderr, " ktool ls   <infile>                 " \
+	fprintf(stderr, " ktool ls    <inpres>                " \
 		"- list contents of pres container\n");
-	fprintf(stderr, " ktool imp  <indir> <outfile>        " \
-		"- import directory into pres container\n");
-	fprintf(stderr, " ktool imps <indir> <outfile>        " \
-		"- import directory into encrypted pres\n");
-	fprintf(stderr, " ktool exp  <infile> <outdir>        " \
+	fprintf(stderr, " ktool imp   <indir> <outpres>       " \
+		"- import directory to new pres container\n");
+	fprintf(stderr, " ktool add   <inpres> <infile>       " \
+		"- add single file to pres container\n");
+	fprintf(stderr, " ktool imps  <indir> <outpres>       " \
+		"- import directory to new encrypted pres\n");
+	fprintf(stderr, " ktool exp   <inpres> <outdir>       " \
 		"- export everything from pres container\n");
-	fprintf(stderr, " ktool expid  <infile> <outdir> <id> " \
+	fprintf(stderr, " ktool expid <inpres> <outdir> <id>  " \
 		"- export specific id from pres container\n");
 	fprintf(stderr, " ktool version                       " \
 		"- print version information\n");
@@ -306,6 +328,9 @@ int main(int argc, char* argv[], char* envp[])
 
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
 		return import_directory(argv[2], argv[3], 0);
+	}
+	if (!strcmp(argv[1], "add") && (argc > 3)) {
+		return add_file(argv[2], argv[3], 0);
 	}
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
 		char* p = k_get_pass("enter password  : ");
