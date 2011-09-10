@@ -198,13 +198,14 @@ static int add_file
 	/* TODO: determine basename offset */
 	if ((r = k_pres_add_file(p, filename, 0)) != 0) {
 		if (r == 1)
-			printf("skipped: '%s'\n", filename);
+			printf("skipped: '%s'.\n", filename);
 		if (r == -1) {
-			perror("pres_add_file");
-			return -1;
+			printf("error adding: '%s', container corrupt.\n",
+				filename);
+			goto err_out;
 		}
-	}
-	printf("added '%s'.\n", filename);
+	} else
+		printf("added '%s'.\n", filename);
 
 	goto out;
 err_out:
