@@ -1,0 +1,6 @@
+- pres api
+	factor out the file resource abstraction from pres. this shouldn't be
+	in libk, but in an external tool, as it involves special semantic
+	meanings for the resource name (i.e. how it handles path name
+	separators and such) in this special use case, which really shouldn't
+	be handled by the library.

@@ -35,6 +35,11 @@
 #elif defined(__WINNT__)
 #define O_NOATIME	_O_BINARY
 #endif
+#if defined(__WINNT__)
+#define WINNT_FLAGS	_O_BINARY
+#else
+#define WINNT_FLAGS	0
+#endif
 
 static int pres_map(struct mmap_t* res, int fd, size_t len, off_t offset)
 {
@@ -338,7 +343,7 @@ static int _open_pres(const char* name, uint32_t writable)
 	if (!writable)
 		fd = open(name, O_RDONLY|O_NOATIME);
 	else
-		fd = open(name, O_RDWR);
+		fd = open(name, O_RDWR|WINNT_FLAGS);
 	if (fd == -1)
 		goto failed;
 	if (fstat(fd, &st))
@@ -1272,13 +1277,13 @@ __export_function int k_pres_export_id
 		/* TODO: if the container isn't encrypted, we are
 		 * able to restore the data between two valid table entries */
 		/* entity was marked as deleted */
-		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", id, name);
 		fprintf(stderr, " k_pres_export_id: resource was deleted\n");
 		return -1;
 	}
 
 	if (keep_dir_structure && k_tcreate_dirs(name)) {
-		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", id, name);
 		perror(" k_tcreate_dirs");
 		return -1;
 	}
@@ -1288,7 +1293,7 @@ __export_function int k_pres_export_id
 
 	int fd = k_tcreat(keep_dir_structure ? name : basename, 0400);
 	if (fd == -1) {
-		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", id, name);
 		perror(" k_tcreat");
 		return -1;
 	}
@@ -1308,8 +1313,8 @@ __export_function int k_pres_export_id
 			nwritten = write(fd, m + total,
 				mmap_window - total);
 			if (nwritten < 0) {
-				fprintf(stderr, "resource %lu: '%s' ->",
-					(long)id, name);
+				fprintf(stderr, "resource %"PRIu64": '%s' ->",
+					id, name);
 				perror(" write");
 				k_pres_res_unmap(&r);
 				k_trollback_and_close(fd);
@@ -1327,8 +1332,8 @@ __export_function int k_pres_export_id
 		while (total != nlast) {
 			nwritten = write(fd, m + total, nlast - total);
 			if (nwritten < 0) {
-				fprintf(stderr, "resource %lu: '%s' ->",
-					(long)id, name);
+				fprintf(stderr, "resource %"PRIu64": '%s' ->",
+					id, name);
 				perror(" write");
 				k_pres_res_unmap(&r);
 				k_trollback_and_close(fd);
@@ -1342,7 +1347,7 @@ __export_function int k_pres_export_id
 	k_hash_final(pf->hash, digest_chk);
 	if (memcmp(pf->rtbl->table[id-1].data_digest, digest_chk,
 	digest_bytes)) {
-		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", id, name);
 		fprintf(stderr, " data digest does not match\n");
 		dumphx("expected", pf->rtbl->table[id-1].data_digest,
 			digest_bytes);
@@ -1354,7 +1359,7 @@ __export_function int k_pres_export_id
 	}
 
 	if (k_tcommit_and_close(fd)) {
-		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, "resource %"PRIu64": '%s' ->", id, name);
 		perror(" k_tcommit_and_close");
 		return -1;
 	}

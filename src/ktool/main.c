@@ -192,6 +192,7 @@ static int import_directory
 	return 0;
 }
 
+#ifndef __WINNT__ /* see main() for explanation */
 static size_t get_basename_offset(const char* filename)
 {
 	const char* c;
@@ -242,6 +243,7 @@ out:
 		_close_pres_container(p);
 	return res;
 }
+#endif
 
 static int export_all(const char* filename, const char* dir)
 {
@@ -365,7 +367,7 @@ out:
 	return res;
 }
 
-static int repack(const char* filename)
+static int repack(const char* filename, const char* new_file)
 {
 	int res = 0;
 	char* pass = 0;
@@ -374,7 +376,9 @@ static int repack(const char* filename)
 	if (!p)
 		goto err_out;
 
-	res = k_pres_repack(p, filename, pass);
+	res = k_pres_repack(p, new_file, pass);
+	if (res)
+		goto err_out;
 
 	goto out;
 err_out:
@@ -397,12 +401,14 @@ static void print_help(void)
 		"- run benchmarks\n");
 	fprintf(stderr, " ktool ls    <inpres>                " \
 		"- list contents of pres container\n");
-	fprintf(stderr, " ktool rep   <inpres>                " \
+	fprintf(stderr, " ktool rep   <inpres> <outpres>      " \
 		"- prune deleted resources\n");
 	fprintf(stderr, " ktool imp   <indir>  <outpres>      " \
 		"- import directory to new pres container\n");
+#ifndef __WINNT__ /* see main() for explanation */
 	fprintf(stderr, " ktool add   <inpres> <infile>       " \
 		"- add single file to pres container\n");
+#endif
 	fprintf(stderr, " ktool imps  <indir>  <outpres>      " \
 		"- import directory to new encrypted pres\n");
 	fprintf(stderr, " ktool exp   <inpres> <outdir>       " \
@@ -429,9 +435,14 @@ int main(int argc, char* argv[], char* envp[])
 	if (!strcmp(argv[1], "imp") && (argc > 3)) {
 		return import_directory(argv[2], argv[3], 0);
 	}
+#ifndef __WINNT__
+/* k_pres_add_file() expects a relative filename without backslashes,
+ * the filetree-walk abstraction does this for us, whereas add_file
+ * doesn't. */
 	if (!strcmp(argv[1], "add") && (argc > 3)) {
 		return add_file(argv[2], argv[3], 0);
 	}
+#endif
 	if (!strcmp(argv[1], "imps") && (argc > 3)) {
 		char* p = k_get_pass("enter password  : ");
 		if (!p)
@@ -460,8 +471,8 @@ int main(int argc, char* argv[], char* envp[])
 		return delete_id(argv[2], strtoull(argv[3], 0, 10));
 	if (!strcmp(argv[1], "ls") && (argc > 2))
 		return list_all(argv[2]);
-	if (!strcmp(argv[1], "rep") && (argc > 2))
-		return repack(argv[2]);
+	if (!strcmp(argv[1], "rep") && (argc > 3))
+		return repack(argv[2], argv[3]);
 	if (!strcmp(argv[1], "test")) {
 		int failed = k_run_unittests(1);
 		if (failed)
