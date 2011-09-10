@@ -85,6 +85,9 @@ __export_function int k_pres_add_file
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
+	if (!strlen(name))
+		goto recoverable_err;
+
 	if (pf->scipher) {
 		memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
 		k_prng_update(pf->prng, data_nonce, pf->nonce_size);
@@ -424,6 +427,10 @@ static int _verify_rtbl_entries(struct pres_file_t* pf)
 	 * entry as corrupt and try to procceed as far as possible */
 	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
 		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
+		/* entry was marked as deleted */
+		if (!e->id)
+			continue;
+
 		k_hash_reset(pf->hash);
 		k_hash_update(pf->hash, e, sz_rtblentry_digest);
 		k_hash_final(pf->hash, digest_chk);
@@ -578,6 +585,10 @@ static int _verify_stringpool(struct pres_file_t* pf)
 	 * still can export it, just the name is lost. */
 	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
 		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
+		/* entry was marked as deleted */
+		if (!e->id)
+			continue;
+
 		uint64_t fn_off = e->filename_offset;
 		uint64_t base_off = e->basename_offset;
 		const char* fn = pool_getmem(&pf->stringpool, fn_off);
@@ -661,8 +672,10 @@ static int _pres_open_key
 
 	if (_get_detached_header(pf))
 		goto failed;
+
 	if (_get_rtbl(pf))
 		goto failed;
+
 	if (_get_stringpool(pf))
 		goto failed;
 
@@ -998,19 +1011,20 @@ __export_function const char* k_pres_res_name_by_id
 (struct pres_file_t* pf, uint64_t id, const char** basename)
 {
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
-	const char* res = pool_getmem(&pf->stringpool,
-		table[id-1].filename_offset);
-	if (basename)
-		*basename = res + table[id-1].basename_offset;
-	return res;
-}
+	const char* res = 0;
 
-__export_function const char* k_pres_res_basename_by_id
-(struct pres_file_t* pf, uint64_t id)
-{
-	struct pres_resource_table_entry_t* table = pf->rtbl->table;
-	return pool_getmem(&pf->stringpool,
-		table[id-1].filename_offset + table[id-1].basename_offset);
+	/* entry was marked as deleted */
+	if (!table[id-1].id) {
+		res = "";
+		if (basename)
+			*basename = "";
+	} else {
+		res = pool_getmem(&pf->stringpool,
+			table[id-1].filename_offset);
+		if (basename)
+			*basename = res + table[id-1].basename_offset;
+	}
+	return res;
 }
 
 __export_function uint64_t k_pres_res_id_by_name
@@ -1020,6 +1034,9 @@ __export_function uint64_t k_pres_res_id_by_name
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 
 	for (i = 0; i < e; ++i) {
+		/* entry was marked as deleted */
+		if (!table[i].id)
+			continue;
 		size_t fn_off = table[i].filename_offset;
 		const char* fn = pool_getmem(&pf->stringpool, fn_off);
 		if (!strcmp(fn, name))
@@ -1125,6 +1142,13 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 	}
 }
 
+__export_function void k_pres_delete_id
+(struct pres_file_t* pf, uint64_t id)
+{
+	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+	memset(&table[id-1], 0, sz_res_tbl_entry);
+}
+
 __export_function int k_pres_export_id
 (struct pres_file_t* pf, uint64_t id, uint32_t keep_dir_structure)
 {
@@ -1135,6 +1159,14 @@ __export_function int k_pres_export_id
 	size_t digest_bytes = (digest_bits + 7) / 8;
 
 	name = k_pres_res_name_by_id(pf, id, &basename);
+	if (!strlen(name)) {
+		/* TODO: if the container isn't encrypted, we are
+		 * able to restore the data between two valid table entries */
+		/* entity was marked as deleted */
+		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);
+		fprintf(stderr, " k_pres_export_id: resource was deleted\n");
+		return -1;
+	}
 
 	if (keep_dir_structure && k_tcreate_dirs(name)) {
 		fprintf(stderr, "resource %lu: '%s' ->", (long)id, name);

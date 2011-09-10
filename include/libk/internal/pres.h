@@ -240,14 +240,13 @@ extern int k_pres_open
 
 extern int k_pres_needs_pass(const char* name);
 
+extern void k_pres_delete_id(struct pres_file_t* pf, uint64_t id);
+
 extern uint64_t k_pres_res_count
 (struct pres_file_t* pf);
 
 extern const char* k_pres_res_name_by_id
 (struct pres_file_t* pf, uint64_t id, const char** basename);
-
-extern const char* k_pres_res_basename_by_id
-(struct pres_file_t* pf, uint64_t id);
 
 extern uint64_t k_pres_res_id_by_name
 (struct pres_file_t* pf, const char* name);

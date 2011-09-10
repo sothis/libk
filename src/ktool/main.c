@@ -249,7 +249,7 @@ out:
 
 }
 
-static int exportid(const char* filename, const char* dir, uint64_t id)
+static int export_id(const char* filename, const char* dir, uint64_t id)
 {
 	const char* basename;
 	int res = 0;
@@ -276,7 +276,32 @@ static int exportid(const char* filename, const char* dir, uint64_t id)
 
 	goto out;
 err_out:
-	perror("exportid");
+	perror("export_id");
+	res = -1;
+out:
+	if (p)
+		_close_pres_container(p);
+	return res;
+}
+
+static int delete_id(const char* filename, uint64_t id)
+{
+	int res = 0;
+	struct pres_file_t* p = _open_pres_container(filename, 1);
+	if (!p)
+		goto err_out;
+
+	uint64_t e = k_pres_res_count(p);
+	if (!id || (id > e)) {
+		printf("invalid id: %lu\n", id);
+		goto err_out;
+	}
+
+	k_pres_delete_id(p, id);
+
+	goto out;
+err_out:
+	perror("delete_id");
 	res = -1;
 out:
 	if (p)
@@ -317,16 +342,18 @@ static void print_help(void)
 		"- run benchmarks\n");
 	fprintf(stderr, " ktool ls    <inpres>                " \
 		"- list contents of pres container\n");
-	fprintf(stderr, " ktool imp   <indir> <outpres>       " \
+	fprintf(stderr, " ktool imp   <indir>  <outpres>      " \
 		"- import directory to new pres container\n");
 	fprintf(stderr, " ktool add   <inpres> <infile>       " \
 		"- add single file to pres container\n");
-	fprintf(stderr, " ktool imps  <indir> <outpres>       " \
+	fprintf(stderr, " ktool imps  <indir>  <outpres>      " \
 		"- import directory to new encrypted pres\n");
 	fprintf(stderr, " ktool exp   <inpres> <outdir>       " \
 		"- export everything from pres container\n");
 	fprintf(stderr, " ktool expid <inpres> <outdir> <id>  " \
 		"- export specific id from pres container\n");
+	fprintf(stderr, " ktool delid <inpres> <id>           " \
+		"- delete specific id from pres container\n");
 	fprintf(stderr, " ktool version                       " \
 		"- print version information\n");
 	fprintf(stderr, " ktool help                          " \
@@ -371,7 +398,9 @@ int main(int argc, char* argv[], char* envp[])
 	if (!strcmp(argv[1], "exp") && (argc > 3))
 		return export_all(argv[2], argv[3]);
 	if (!strcmp(argv[1], "expid") && (argc > 4))
-		return exportid(argv[2], argv[3], strtoull(argv[4], 0, 10));
+		return export_id(argv[2], argv[3], strtoull(argv[4], 0, 10));
+	if (!strcmp(argv[1], "delid") && (argc > 3))
+		return delete_id(argv[2], strtoull(argv[3], 0, 10));
 	if (!strcmp(argv[1], "ls") && (argc > 2))
 		return list_all(argv[2]);
 	if (!strcmp(argv[1], "test")) {
