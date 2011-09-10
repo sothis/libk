@@ -297,7 +297,13 @@ static int delete_id(const char* filename, uint64_t id)
 		goto err_out;
 	}
 
+	const char* name = k_pres_res_name_by_id(p, id, 0);
+	if (!strlen(name)) {
+		printf("%lu is already deleted\n", id);
+		goto out;
+	}
 	k_pres_delete_id(p, id);
+	printf("deleted %lu:\t'%s'\n", id, name);
 
 	goto out;
 err_out:
