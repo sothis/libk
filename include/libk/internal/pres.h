@@ -201,6 +201,9 @@ enum pres_structure_sizes_e {
 };
 
 
+extern int k_pres_needs_pass
+(const char* name);
+
 /* creates a new pres container. if it exists the function will succeed only
  * if we have read-write permissions. in that case the existing container
  * will be overwritten only if pres_commit_and_close() succeeds. on the other
@@ -234,15 +237,26 @@ extern int k_pres_add_file
  * to EINVAL. in the case the container existed before it will be overwritten
  * only if this function succeeds, it's guaranteed that either the old or
  * the new container will exist on the filesystem, no state in between. */
-extern int k_pres_close(struct pres_file_t* pf);
+extern int k_pres_close
+(struct pres_file_t* pf);
 
 /* opens existing container */
 extern int k_pres_open
 (struct pres_file_t* pf, const char* name, const char* pass, uint32_t writable);
 
-extern int k_pres_needs_pass(const char* name);
 
-extern void k_pres_delete_id(struct pres_file_t* pf, uint64_t id);
+extern int k_pres_init_new_resource
+(struct pres_file_t* pf);
+
+extern int k_pres_append_to_new_resource
+(struct pres_file_t* pf, const void* data, size_t length);
+
+extern int k_pres_commit_new_resource
+(struct pres_file_t* pf, const char* name, size_t basename_off, uint64_t uuid);
+
+
+extern void k_pres_delete_id
+(struct pres_file_t* pf, uint64_t id);
 
 extern uint64_t k_pres_res_count
 (struct pres_file_t* pf);
