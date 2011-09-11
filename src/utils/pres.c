@@ -1463,7 +1463,7 @@ __export_function int k_pres_repack
 			continue;
 		if (_add_resource_to_new_pres(&new, &r)) {
 			/* keep temporary filename on close,
-			 * get's deleted on process termination */
+			 * will be deleted on process termination */
 			new.is_writable = 0;
 			k_pres_close(&new);
 			goto out;

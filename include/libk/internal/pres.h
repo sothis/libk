@@ -18,7 +18,7 @@
 
 /* NOTE: _every_ change in the on-disk structures have to result in a
  * version change */
-#define PRES_VER		(0x00000003u)
+#define PRES_VER		(0x00000004u)
 #define PRES_MAGIC		(0x0701198123421337ull)
 #define PRES_MAX_DIGEST_LENGTH	(128ull)
 #define PRES_MAX_IV_LENGTH	(128ull)
@@ -56,6 +56,7 @@ struct pres_file_header_t {
 	/* if the used cipher is a plain streamcipher, set ciphermode to 0 */
 	uint32_t	ciphermode;
 	uint32_t	keysize;
+	/* currently unused */
 	uint32_t	tweaksize;
 	uint64_t	filesize;
 
@@ -169,28 +170,28 @@ struct pres_res_t {
 
 struct pres_options_t {
 	/* mandatory */
-	const char* name;
+	const char*		name;
 	/* mandatory */
-	enum hashsum_e hashsum;
+	enum hashsum_e		hashsum;
 	/* optional */
-	enum streamcipher_e streamcipher;
+	enum streamcipher_e	streamcipher;
 	/* optional, ignored if a streamcipher is set */
-	enum blockcipher_e blockcipher;
+	enum blockcipher_e	blockcipher;
 	/* optional, ignored if a streamcipher is set */
-	enum bcmode_e ciphermode;
+	enum bcmode_e		ciphermode;
 
 	/* optional, if 0 (i.e. not set, then the statesize of the selected
 	 * hashsum will be used */
-	uint32_t hashsize;
+	uint32_t		hashsize;
 	/* mandatory if a cipher is set */
-	uint32_t keysize;
-	/* optional, depends on the selected cipher */
-	uint32_t tweaksize;
+	uint32_t		keysize;
+	/* optional, depends on the selected cipher, currently unused */
+	uint32_t		tweaksize;
 
 	/* optional, if a cipher is set, use key or pass. if both are given
 	 * the key will be used */
-	void* key;
-	const char* pass;
+	void*			key;
+	const char*		pass;
 };
 
 enum pres_structure_sizes_e {
