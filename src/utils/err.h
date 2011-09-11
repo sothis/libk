@@ -18,8 +18,6 @@
 
 void k_post_error(enum k_error_e, enum k_errorlevel_e, const int, const char*);
 
-typedef int	kerror_t;
-
 extern kerror_t* _kerrno(void);
 #define	kerrno		(*_kerrno())
 

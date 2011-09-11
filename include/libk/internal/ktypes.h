@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+typedef int	kerror_t;
+
 
 struct range8_t {
 	uint8_t	from;

@@ -10,7 +10,6 @@
 
 #include "err.h"
 
-#include <libk/libk.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
