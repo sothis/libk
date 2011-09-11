@@ -124,6 +124,7 @@ SRC		+= ./src/hash/sha1/sha1.c
 
 SRC		+= ./src/kderive/simple.c
 
+SRC		+= ./src/pres/filedesc.c
 SRC		+= ./src/pres/open.c
 SRC		+= ./src/pres/close.c
 SRC		+= ./src/pres/read.c

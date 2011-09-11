@@ -8,6 +8,8 @@
  * worldwide. This software is distributed without any warranty.
 */
 
+#include <errno.h>
+
 /* this produces error codes larger than 4095, except for zero */
 #define ERR_CODE(x)	(x << 12)
 /* reverse, in order to be able to use kerrno as array index */
