@@ -61,7 +61,8 @@ int add_descriptor(struct pres_file_t* f)
 		kerrno = errno;
 		goto out;
 	}
-
+	/* maybe return index here instead of using f->fd as descriptor,
+	 * in order to make lookups faster */
 out:
 	return -kerrno;
 }
