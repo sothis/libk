@@ -69,6 +69,8 @@ void skein_init(
 				ctx->cipher =
 					k_bc_init(BLK_CIPHER_THREEFISH_256);
 		}
+
+		// note: ctx->cipher might be zero here!
 	}
 
 	ctx->outputsize = hash_outputsize;
