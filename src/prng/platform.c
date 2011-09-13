@@ -19,7 +19,7 @@
 
 enum platform_characteristics_e {
 	wordsize	= 32,
-	cacheitems	= 4096,
+	cacheitems	= 512,
 	cachesize	= cacheitems*((wordsize+7)/8),
 };
 

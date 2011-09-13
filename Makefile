@@ -3,7 +3,7 @@ VERSION		:= $(shell ./version)
 UNAMEEXISTS	:= $(shell uname > /dev/null 2>&1; echo $$?)
 PWDEXISTS	:= $(shell pwd > /dev/null 2>&1; echo $$?)
 GCCEXISTS	:= $(shell gcc --version > /dev/null 2>&1; echo $$?)
-CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
+#CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
 #ICCEXISTS	:= $(shell icc --version > /dev/null 2>&1; echo $$?)
 GITEXISTS	:= $(shell git --version > /dev/null 2>&1; echo $$?)
 TAREXISTS	:= $(shell tar --version > /dev/null 2>&1; echo $$?)
@@ -163,6 +163,8 @@ DEFINES		+= -D_POSIX_C_SOURCE=200809L
 endif
 ifdef PLAT_WINNT
 DEFINES		+= -D_CRT_RAND_S=1
+DEFINES		+= -D_WIN32=1
+DEFINES		+= -DWIN32=1
 endif
 DEFINES		+= -D_BSD_SOURCE=1
 DEFINES		+= -D_FILE_OFFSET_BITS=64
@@ -172,6 +174,7 @@ DEFINES		+= -D_REENTRANT=1
 DEFINES		+= -D__$(PLATFORM)__=1
 DEFINES		+= -DVERSION='"$(VERSION)"'
 DEFINES		+= -D__LIBRARY_BUILD=1
+DEFINES		+= -D__$(TOOLCHAIN)__=1
 
 # toolchain configuration
 
@@ -190,13 +193,9 @@ CFLAGS		+= -fvisibility=hidden
 endif
 
 ifdef PLAT_DARWIN
-MACARCHS	:= -arch x86_64
-CFLAGS		+= -mmacosx-version-min=10.5
+CFLAGS		+= -mmacosx-version-min=10.7
 endif
 ifdef M32
-ifdef PLAT_DARWIN
-MACARCHS	:= -arch i386
-endif
 CFLAGS		+= -m32
 endif
 
@@ -211,7 +210,12 @@ CFLAGS		+= -flto -fwhole-program
 else
 
 ifeq ($(GCC_MAJOR), 4)
-ifeq ($(GCC_MAJOR), 5)
+ifeq ($(GCC_MINOR), 5)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 4)
+ifeq ($(GCC_MINOR), 6)
 CFLAGS		+= -flto -fuse-linker-plugin
 endif
 endif
