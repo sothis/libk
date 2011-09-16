@@ -114,7 +114,7 @@ __export_function int k_pres_init_new_resource
 
 	goto out;
 unrecoverable_err:
-	pf->is_corrupt = 1;
+//	pf->is_corrupt = 1;
 	res = -1;
 out:
 	return res;
@@ -187,13 +187,15 @@ __export_function int k_pres_commit_new_resource
 	if (namelen == 1)
 		goto recoverable_err;
 
-	if (pool_append(&pf->stringpool, name, namelen))
-		goto unrecoverable_err;
-#if 0
+#if 1
 	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
 #endif
+
+	if (pool_append(&pf->stringpool, name, namelen))
+		goto unrecoverable_err;
+
 	pf->cur_resentries++;
 
 	k_hash_final(pf->hash,
@@ -226,9 +228,6 @@ __export_function int k_pres_commit_new_resource
 	res = 0;
 	goto out;
 unrecoverable_err:
-	pf->is_corrupt = 1;
-	res = -1;
-	goto out;
 recoverable_err:
 	res = 1;
 	pres_rollback(pf);
