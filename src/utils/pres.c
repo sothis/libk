@@ -64,7 +64,7 @@ static int pres_unmap(struct mmap_t* res)
 	return munmap(res->mem - res->off, res->len);
 }
 
-static int pres_rollback(struct pres_file_t* pf)
+int k_pres_rollback(struct pres_file_t* pf)
 {
 	if (ftruncate(pf->fd, pf->cur_stringpoolstart)) {
 		return -1;
@@ -97,8 +97,10 @@ __export_function int k_pres_init_new_resource
 		pf->cur_allocedentries += 32768;
 		void* temp = realloc(pf->rtbl,
 			sz_res_tbl + pf->cur_allocedentries*sz_res_tbl_entry);
-		if (!temp)
+		if (!temp) {
+			pf->cur_allocedentries -= 32768;
 			goto unrecoverable_err;
+		}
 		pf->rtbl = temp;
 		memset(&pf->rtbl->table[pf->cur_resentries], 0,
 			32768*sz_res_tbl_entry);
@@ -170,7 +172,7 @@ __export_function int k_pres_append_to_new_resource
 	goto out;
 recoverable_err:
 	res = 1;
-	pres_rollback(pf);
+	k_pres_rollback(pf);
 out:
 	return res;
 }
@@ -230,7 +232,7 @@ __export_function int k_pres_commit_new_resource
 unrecoverable_err:
 recoverable_err:
 	res = 1;
-	pres_rollback(pf);
+	k_pres_rollback(pf);
 out:
 	return res;
 }

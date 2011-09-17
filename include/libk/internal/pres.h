@@ -247,6 +247,9 @@ extern int k_pres_append_to_new_resource
 extern int k_pres_commit_new_resource
 (struct pres_file_t* pf, const char* name, size_t basename_off, uint64_t uuid);
 
+extern int k_pres_rollback
+(struct pres_file_t* pf);
+
 /* adds an existing file to the resource container, might fail, but leaves
  * state untouched in that case, so that a consecutive call with another file
  * still can succeed without producing a corrupt resource container file.
