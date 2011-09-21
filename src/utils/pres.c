@@ -1103,7 +1103,7 @@ __export_function const char* k_pres_res_name_by_id
 __export_function uint64_t k_pres_res_id_by_name
 (struct pres_file_t* pf, const char* name)
 {
-	uint64_t i = 0, e = pf->rtbl->entries;
+	uint64_t i = 0, e = pf->cur_resentries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 
 	for (i = 0; i < e; ++i) {
@@ -1121,7 +1121,7 @@ __export_function uint64_t k_pres_res_id_by_name
 __export_function uint64_t k_pres_res_id_by_uuid
 (struct pres_file_t* pf, uint64_t uuid)
 {
-	uint64_t i = 0, e = pf->rtbl->entries;
+	uint64_t i = 0, e = pf->cur_resentries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 
 	for (i = 0; i < e; ++i) {
