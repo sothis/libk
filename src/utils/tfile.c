@@ -291,8 +291,12 @@ out:
 
 __export_function int k_tcommit_and_close(int fd)
 {
-	if (!tfile_init)
+	if (!tfile_init) {
+		/* fd wasn't opened by tcreat(), simply close it */
+		fsync(fd);
+		close(fd);
 		return 0;
+	}
 
 	struct tfile_t* openfiles = pool_getmem(&mappool, 0);
 	size_t nfiles = pool_getsize(&mappool) / sizeof(struct tfile_t);
@@ -310,8 +314,11 @@ __export_function int k_tcommit_and_close(int fd)
 
 __export_function void k_trollback_and_close(int fd)
 {
-	if (!tfile_init)
-		return;
+	if (!tfile_init) {
+		/* fd wasn't opened by tcreat(), simply close it */
+		fsync(fd);
+		close(fd);
+	}
 
 	struct tfile_t* openfiles = pool_getmem(&mappool, 0);
 	size_t nfiles = pool_getsize(&mappool) / sizeof(struct tfile_t);

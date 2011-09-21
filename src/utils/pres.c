@@ -64,7 +64,7 @@ static int pres_unmap(struct mmap_t* res)
 	return munmap(res->mem - res->off, res->len);
 }
 
-static int pres_rollback(struct pres_file_t* pf)
+int k_pres_rollback(struct pres_file_t* pf)
 {
 	if (ftruncate(pf->fd, pf->cur_stringpoolstart)) {
 		return -1;
@@ -97,8 +97,10 @@ __export_function int k_pres_init_new_resource
 		pf->cur_allocedentries += 32768;
 		void* temp = realloc(pf->rtbl,
 			sz_res_tbl + pf->cur_allocedentries*sz_res_tbl_entry);
-		if (!temp)
+		if (!temp) {
+			pf->cur_allocedentries -= 32768;
 			goto unrecoverable_err;
+		}
 		pf->rtbl = temp;
 		memset(&pf->rtbl->table[pf->cur_resentries], 0,
 			32768*sz_res_tbl_entry);
@@ -114,7 +116,7 @@ __export_function int k_pres_init_new_resource
 
 	goto out;
 unrecoverable_err:
-	pf->is_corrupt = 1;
+//	pf->is_corrupt = 1;
 	res = -1;
 out:
 	return res;
@@ -170,7 +172,7 @@ __export_function int k_pres_append_to_new_resource
 	goto out;
 recoverable_err:
 	res = 1;
-	pres_rollback(pf);
+	k_pres_rollback(pf);
 out:
 	return res;
 }
@@ -187,13 +189,15 @@ __export_function int k_pres_commit_new_resource
 	if (namelen == 1)
 		goto recoverable_err;
 
-	if (pool_append(&pf->stringpool, name, namelen))
-		goto unrecoverable_err;
-#if 0
+#if 1
 	/* TODO: make this optional */
 	if (fsync(pf->fd))
 		goto unrecoverable_err;
 #endif
+
+	if (pool_append(&pf->stringpool, name, namelen))
+		goto unrecoverable_err;
+
 	pf->cur_resentries++;
 
 	k_hash_final(pf->hash,
@@ -226,12 +230,9 @@ __export_function int k_pres_commit_new_resource
 	res = 0;
 	goto out;
 unrecoverable_err:
-	pf->is_corrupt = 1;
-	res = -1;
-	goto out;
 recoverable_err:
 	res = 1;
-	pres_rollback(pf);
+	k_pres_rollback(pf);
 out:
 	return res;
 }
@@ -1102,7 +1103,7 @@ __export_function const char* k_pres_res_name_by_id
 __export_function uint64_t k_pres_res_id_by_name
 (struct pres_file_t* pf, const char* name)
 {
-	uint64_t i = 0, e = pf->rtbl->entries;
+	uint64_t i = 0, e = pf->cur_resentries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 
 	for (i = 0; i < e; ++i) {
@@ -1120,7 +1121,7 @@ __export_function uint64_t k_pres_res_id_by_name
 __export_function uint64_t k_pres_res_id_by_uuid
 (struct pres_file_t* pf, uint64_t uuid)
 {
-	uint64_t i = 0, e = pf->rtbl->entries;
+	uint64_t i = 0, e = pf->cur_resentries;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
 
 	for (i = 0; i < e; ++i) {
