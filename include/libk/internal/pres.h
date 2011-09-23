@@ -18,7 +18,7 @@
 
 /* NOTE: _every_ change in the on-disk structures have to result in a
  * version change */
-#define PRES_VER		(0x00000003u)
+#define PRES_VER		(0x00000004u)
 #define PRES_MAGIC		(0x0701198123421337ull)
 #define PRES_MAX_DIGEST_LENGTH	(128ull)
 #define PRES_MAX_IV_LENGTH	(128ull)
@@ -77,6 +77,13 @@ struct pres_file_header_t {
 } __attribute__((packed));
 
 struct pres_detached_header_t {
+	uint64_t	data_pool_size;
+	uint64_t	data_pool_start;
+
+	uint64_t	string_pool_size;
+	uint64_t	string_pool_start;
+	uint8_t		string_pool_iv[PRES_MAX_IV_LENGTH];
+
 	uint64_t	resource_table_size;
 	uint64_t	resource_table_start;
 	uint8_t		resource_table_iv[PRES_MAX_IV_LENGTH];
@@ -111,13 +118,6 @@ struct pres_resource_table_entry_t {
 struct pres_resource_table_t {
 	uint64_t			entries;
 
-	uint64_t			string_pool_size;
-	uint64_t			string_pool_start;
-	uint8_t				string_pool_iv[PRES_MAX_IV_LENGTH];
-
-	uint64_t			data_pool_size;
-	uint64_t			data_pool_start;
-
 //	uint8_t				signature[PRES_MAX_SIG_LENGTH];
 	uint8_t				digest[PRES_MAX_DIGEST_LENGTH];
 
@@ -132,6 +132,7 @@ struct mmap_t {
 
 struct pres_file_t {
 	int				fd;
+	int				metafd;
 	int				is_writable;
 	int				is_open;
 	int				is_corrupt;
