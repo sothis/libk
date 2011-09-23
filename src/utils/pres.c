@@ -200,6 +200,13 @@ __export_function int k_pres_commit_new_resource
 
 	pf->cur_resentries++;
 
+
+	memset(pf->rtbl->table[pf->cur_resentries-1].name, 0,
+		PRES_MAX_NAME_LENGTH);
+	snprintf((char*)pf->rtbl->table[pf->cur_resentries-1].name,
+		PRES_MAX_NAME_LENGTH, "%s", name);
+
+
 	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].data_digest);
 
@@ -1166,10 +1173,16 @@ __export_function const char* k_pres_res_name_by_id
 		if (basename)
 			*basename = "";
 	} else {
+#if 0
 		res = pool_getmem(&pf->stringpool,
 			table[id-1].filename_offset);
 		if (basename)
 			*basename = res + table[id-1].basename_offset;
+#else
+		res = (const char*)table[id-1].name;
+		if (basename)
+			*basename = res + table[id-1].basename_offset;
+#endif
 	}
 	return res;
 }
