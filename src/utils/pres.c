@@ -83,6 +83,7 @@ __export_function int k_pres_init_new_resource
 {
 	int res = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
+	uint8_t zero_nonce[PRES_MAX_IV_LENGTH];
 
 
 	if (pf->is_corrupt)
@@ -90,7 +91,11 @@ __export_function int k_pres_init_new_resource
 
 	if (pf->scipher) {
 		memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
-		k_prng_update(pf->prng, data_nonce, pf->nonce_size);
+		memset(zero_nonce, 0, PRES_MAX_IV_LENGTH);
+		while (!memcmp(data_nonce, zero_nonce, pf->nonce_size)) {
+			memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
+			k_prng_update(pf->prng, data_nonce, pf->nonce_size);
+		}
 	}
 
 	if (pf->cur_allocedentries < (pf->cur_resentries+1)) {
