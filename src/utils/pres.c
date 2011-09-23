@@ -1031,7 +1031,6 @@ static int _commit_and_close(struct pres_file_t* pf)
 	int res = 0;
 
 	if (pf->is_corrupt) {
-		printf("1\n");
 		goto err_out;
 	}
 
@@ -1062,12 +1061,10 @@ static int _commit_and_close(struct pres_file_t* pf)
 	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
 	k_hash_final(pf->hash, pf->hdr.digest);
 	if (lseek(pf->fd, 0, SEEK_SET) == -1) {
-		printf("2\n");
 		goto err_out;
 	}
 	s = sz_file_header;
 	if (write(pf->fd, &pf->hdr, s) != s) {
-		printf("3\n");
 		goto err_out;
 	}
 
@@ -1076,7 +1073,6 @@ static int _commit_and_close(struct pres_file_t* pf)
 	k_hash_final(pf->hash, pf->dhdr.digest);
 
 	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1) {
-		printf("4\n");
 		goto err_out;
 	}
 	s = sz_detached_hdr;
@@ -1089,12 +1085,10 @@ static int _commit_and_close(struct pres_file_t* pf)
 		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, s);
 	}
 	if (write(pf->fd, &pf->dhdr, s) != s) {
-		printf("5\n");
 		goto err_out;
 	}
 
 	if (lseek(pf->fd, string_pool_start, SEEK_SET) == -1) {
-		printf("6\n");
 		goto err_out;
 	}
 	s = pf->stringpool.data_size;
@@ -1105,7 +1099,6 @@ static int _commit_and_close(struct pres_file_t* pf)
 			pf->stringpool.base, s);
 	}
 	if (write(pf->fd, pf->stringpool.base, s) != s) {
-		printf("7\n");
 		goto err_out;
 	}
 
@@ -1120,7 +1113,6 @@ static int _commit_and_close(struct pres_file_t* pf)
 	}
 
 	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1) {
-		printf("8\n");
 		goto err_out;
 	}
 	s = sz_res_tbl + pf->rtbl->entries*sz_res_tbl_entry;
@@ -1130,12 +1122,10 @@ static int _commit_and_close(struct pres_file_t* pf)
 		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, s);
 	}
 	if (write(pf->fd, pf->rtbl, s) != s) {
-		printf("9\n");
 		goto err_out;
 	}
 
 	res = k_tcommit_and_close(pf->fd);
-	printf("10\n");
 	goto out;
 err_out:
 	k_trollback_and_close(pf->fd);
