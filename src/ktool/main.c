@@ -331,7 +331,7 @@ static int delete_id(const char* filename, uint64_t id)
 		goto out;
 	}
 	k_pres_delete_id(p, id);
-	printf("deleted %"PRIu64":\t'%s'\n", id, name);
+	printf("deleted %"PRIu64"\n", id);
 
 	goto out;
 err_out:
