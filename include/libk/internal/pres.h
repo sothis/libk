@@ -20,6 +20,8 @@
  * version change */
 #define PRES_VER		(0x00000004u)
 #define PRES_MAGIC		(0x0701198123421337ull)
+#define PRES_MAX_NAME_LENGTH	(256ull)
+#define PRES_MAX_VERSION_LENGTH	(256ull)
 #define PRES_MAX_DIGEST_LENGTH	(128ull)
 #define PRES_MAX_IV_LENGTH	(128ull)
 #define PRES_MAX_SIG_LENGTH	(32768ull)
@@ -59,7 +61,7 @@ struct pres_file_header_t {
 	uint32_t	tweaksize;
 	uint64_t	filesize;
 
-	char		libk_version_string[256];
+	uint8_t		libk_version_string[PRES_MAX_VERSION_LENGTH];
 
 	uint64_t	detached_header_size;
 	uint64_t	detached_header_start;
@@ -110,6 +112,8 @@ struct pres_resource_table_entry_t {
 	uint8_t		data_iv[PRES_MAX_IV_LENGTH];
 //	uint8_t		data_signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		data_digest[PRES_MAX_DIGEST_LENGTH];
+
+	uint8_t		name[PRES_MAX_NAME_LENGTH];
 
 //	uint8_t		signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		digest[PRES_MAX_DIGEST_LENGTH];
