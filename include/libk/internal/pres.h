@@ -82,10 +82,6 @@ struct pres_detached_header_t {
 	uint64_t	data_pool_size;
 	uint64_t	data_pool_start;
 
-	uint64_t	string_pool_size;
-	uint64_t	string_pool_start;
-	uint8_t		string_pool_iv[PRES_MAX_IV_LENGTH];
-
 	uint64_t	resource_table_size;
 	uint64_t	resource_table_start;
 	uint8_t		resource_table_iv[PRES_MAX_IV_LENGTH];
@@ -99,12 +95,6 @@ struct pres_resource_table_entry_t {
 	uint64_t	id;
 	uint64_t	uuid;
 	uint64_t	basename_offset;
-
-	/* relative pointer into string pool */
-	uint64_t	filename_size;
-	uint64_t	filename_offset;
-//	uint8_t		filename_signature[PRES_MAX_SIG_LENGTH];
-	uint8_t		filename_digest[PRES_MAX_DIGEST_LENGTH];
 
 	/* relative pointer into data pool */
 	uint64_t	data_size;
@@ -150,11 +140,8 @@ struct pres_file_t {
 	uint64_t			cur_allocedentries;
 	uint64_t			cur_datapoolstart;
 	uint64_t			cur_datapoolsize;
-	uint64_t			cur_stringpoolstart;
-	uint64_t			cur_stringpoolsize;
 	uint8_t*			iobuf;
 	void*				key;
-	struct mempool_t		stringpool;
 	struct pres_file_header_t	hdr;
 	struct pres_detached_header_t	dhdr;
 	struct pres_resource_table_t*	rtbl;
@@ -174,28 +161,28 @@ struct pres_res_t {
 
 struct pres_options_t {
 	/* mandatory */
-	const char* name;
+	const char*		name;
 	/* mandatory */
-	enum hashsum_e hashsum;
+	enum hashsum_e		hashsum;
 	/* optional */
-	enum streamcipher_e streamcipher;
+	enum streamcipher_e	streamcipher;
 	/* optional, ignored if a streamcipher is set */
-	enum blockcipher_e blockcipher;
+	enum blockcipher_e	blockcipher;
 	/* optional, ignored if a streamcipher is set */
-	enum bcmode_e ciphermode;
+	enum bcmode_e		ciphermode;
 
 	/* optional, if 0 (i.e. not set, then the statesize of the selected
 	 * hashsum will be used */
-	uint32_t hashsize;
+	uint32_t		hashsize;
 	/* mandatory if a cipher is set */
-	uint32_t keysize;
+	uint32_t		keysize;
 	/* optional, depends on the selected cipher */
-	uint32_t tweaksize;
+	uint32_t		tweaksize;
 
 	/* optional, if a cipher is set, use key or pass. if both are given
 	 * the key will be used */
-	void* key;
-	const char* pass;
+	void*			key;
+	const char*		pass;
 };
 
 enum pres_structure_sizes_e {
