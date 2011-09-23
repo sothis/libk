@@ -566,10 +566,6 @@ static int _verify_rtbl(struct pres_file_t* pf)
 	if (memcmp(pf->rtbl->digest, digest_chk, digest_bytes))
 		goto invalid;
 
-/* TODO: allow this */
-	if (!pf->rtbl->entries)
-		goto invalid;
-
 	goto valid;
 invalid:
 	res = -1;
