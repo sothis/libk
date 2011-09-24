@@ -131,6 +131,9 @@ __export_function int k_pres_init_new_resource
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
 	uint8_t zero_nonce[PRES_MAX_IV_LENGTH];
 
+	if (!pf->is_writable)
+		goto unrecoverable_err;
+
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
@@ -1248,6 +1251,10 @@ __export_function void k_pres_delete_id
 {
 	struct pres_resource_table_entry_t e;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+
+	/* TODO: return error code */
+	if (!pf->is_writable)
+		return;
 
 	memcpy(&e, &table[id-1], sz_res_tbl_entry);
 	memset(&table[id-1], 0, sz_res_tbl_entry);
