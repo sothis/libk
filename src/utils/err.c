@@ -44,6 +44,8 @@ static const char* const _err_messages[] = {
 	"detached file header digest does not match\n"
 		"(wrong password or file corrupt)",
 	"mode is not suitable for streamcipher usage",
+	"metadata file exists, container is probably corrupted but can be "
+		"repaired",
 };
 
 static void _default_err_handler

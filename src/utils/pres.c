@@ -677,8 +677,32 @@ fail:
 static int _pres_open_key
 (struct pres_file_t* pf, const char* name, const void* key, uint32_t writable)
 {
+	enum k_error_e err = K_ESUCCESS;
 	memset(pf, 0, sizeof(struct pres_file_t));
 	pf->fd = -1;
+
+	size_t metanamelen = strlen(name) + sizeof(".meta");
+	pf->metaname = calloc(metanamelen, sizeof(char));
+	if (!pf->metaname)
+		goto failed;
+	snprintf(pf->metaname, metanamelen, "%s.meta", name);
+
+	/* if metafile already exist, prevent opening the container,
+	 * it's probably corrupted */
+
+	if (writable) {
+		int metafd = open(pf->metaname,
+			O_CREAT | O_EXCL | O_RDWR, 0600);
+		if (metafd < 0) {
+			if (errno == EEXIST) {
+				err = K_METAEXIST;
+				goto failed;
+			} else
+				goto failed;
+		} else {
+			close(metafd);
+		}
+	}
 
 	pf->fd = _open_pres(name, writable);
 	if (pf->fd == -1)
@@ -715,12 +739,6 @@ static int _pres_open_key
 		goto setfilepointer;
 
 	/* backup metadata */
-	size_t metanamelen = strlen(name) + sizeof(".meta");
-	pf->metaname = calloc(metanamelen, sizeof(char));
-	if (!pf->metaname)
-		goto failed;
-	snprintf(pf->metaname, metanamelen, "%s.meta", name);
-
 	if (_commit_meta_data(pf))
 		goto failed;
 
@@ -750,6 +768,7 @@ failed:
 	if (pf->fd != -1)
 		close(pf->fd);
 	memset(pf, 0, sizeof(struct pres_file_t));
+	k_error(err);
 	return -1;
 }
 
