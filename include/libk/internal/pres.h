@@ -130,6 +130,7 @@ struct pres_file_t {
 	int				is_writable;
 	int				is_open;
 	int				is_corrupt;
+	char*				metaname;
 	k_hash_t*			hash;
 	k_sc_t*				scipher;
 	k_prng_t*			prng;
