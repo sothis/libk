@@ -681,6 +681,7 @@ static int _pres_open_key
 (struct pres_file_t* pf, const char* name, const void* key, uint32_t writable)
 {
 	enum k_error_e err = K_ESUCCESS;
+	int metafd = -1;
 	memset(pf, 0, sizeof(struct pres_file_t));
 	pf->fd = -1;
 
@@ -694,7 +695,7 @@ static int _pres_open_key
 	 * it's probably corrupted */
 
 	if (writable) {
-		int metafd = open(pf->metaname,
+		metafd = open(pf->metaname,
 			O_CREAT | O_EXCL | O_RDWR, 0600);
 		if (metafd < 0) {
 			if (errno == EEXIST) {
@@ -703,6 +704,7 @@ static int _pres_open_key
 			} else
 				goto failed;
 		} else {
+			unlink(pf->metaname);
 			close(metafd);
 		}
 	}
@@ -929,10 +931,10 @@ __export_function int k_pres_create
 	if (!pf->metaname)
 		goto err_out;
 	snprintf(pf->metaname, metanamelen, "%s.meta", opt->name);
-#if 0
+
 	if (_commit_meta_data(pf))
 		goto err_out;
-#endif
+
 	pf->is_open = 1;
 	pf->is_writable = 1;
 	return 0;
