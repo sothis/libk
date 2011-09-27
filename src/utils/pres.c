@@ -929,10 +929,10 @@ __export_function int k_pres_create
 	if (!pf->metaname)
 		goto err_out;
 	snprintf(pf->metaname, metanamelen, "%s.meta", opt->name);
-
+#if 0
 	if (_commit_meta_data(pf))
 		goto err_out;
-
+#endif
 	pf->is_open = 1;
 	pf->is_writable = 1;
 	return 0;
