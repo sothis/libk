@@ -66,7 +66,7 @@ static int pres_unmap(struct mmap_t* res)
 
 int k_pres_rollback(struct pres_file_t* pf)
 {
-	if (ftruncate(pf->fd, pf->cur_stringpoolstart)) {
+	if (ftruncate(pf->fd, pf->cur_rtbl_start)) {
 		return -1;
 	}
 	if (lseek(pf->fd, 0, SEEK_END) == -1) {
@@ -78,19 +78,72 @@ int k_pres_rollback(struct pres_file_t* pf)
 	return 0;
 }
 
+static int _commit_meta_data(struct pres_file_t* pf)
+{
+	uint64_t fs, rts, dps, dpsi, e;
+	pf->metafd = -1;
+
+	fs = pf->hdr.filesize;
+	rts = pf->dhdr.resource_table_start;
+	dps = pf->dhdr.data_pool_start;
+	dpsi = pf->dhdr.data_pool_size;
+	e = pf->rtbl->entries;
+
+	pf->hdr.filesize = pf->cur_filesize;
+	pf->dhdr.resource_table_start = pf->cur_rtbl_start;
+	pf->dhdr.data_pool_start = pf->cur_datapoolstart;
+	pf->dhdr.data_pool_size = pf->cur_datapoolsize;
+	pf->rtbl->entries = pf->cur_resentries;
+
+	pf->metafd = k_tcreat(pf->metaname, 0600);
+	if (pf->metafd < 0)
+		goto failed;
+
+	if (write(pf->metafd, &pf->hdr, sz_file_header) != sz_file_header)
+		goto failed;
+
+	if (write(pf->metafd, &pf->dhdr, sz_detached_hdr) != sz_detached_hdr)
+		goto failed;
+
+	size_t s = sz_res_tbl + pf->rtbl->entries*sz_res_tbl_entry;
+	if (write(pf->metafd, pf->rtbl, s) != s)
+		goto failed;
+
+	if (k_tcommit_and_close(pf->metafd))
+		goto failed;
+
+	return 0;
+failed:
+	pf->hdr.filesize = fs;
+	pf->dhdr.resource_table_start = rts;
+	pf->dhdr.data_pool_start = dps;
+	pf->dhdr.data_pool_size = dpsi;
+	pf->rtbl->entries = e;
+	if (pf->metafd != -1)
+		k_trollback_and_close(pf->metafd);
+	return -1;
+}
+
 __export_function int k_pres_init_new_resource
 (struct pres_file_t* pf)
 {
 	int res = 0;
 	uint8_t data_nonce[PRES_MAX_IV_LENGTH];
+	uint8_t zero_nonce[PRES_MAX_IV_LENGTH];
 
+	if (!pf->is_writable)
+		goto unrecoverable_err;
 
 	if (pf->is_corrupt)
 		goto unrecoverable_err;
 
 	if (pf->scipher) {
 		memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
-		k_prng_update(pf->prng, data_nonce, pf->nonce_size);
+		memset(zero_nonce, 0, PRES_MAX_IV_LENGTH);
+		while (!memcmp(data_nonce, zero_nonce, pf->nonce_size)) {
+			memset(data_nonce, 0, PRES_MAX_IV_LENGTH);
+			k_prng_update(pf->prng, data_nonce, pf->nonce_size);
+		}
 	}
 
 	if (pf->cur_allocedentries < (pf->cur_resentries+1)) {
@@ -195,37 +248,44 @@ __export_function int k_pres_commit_new_resource
 		goto unrecoverable_err;
 #endif
 
-	if (pool_append(&pf->stringpool, name, namelen))
-		goto unrecoverable_err;
-
 	pf->cur_resentries++;
+
+	memset(pf->rtbl->table[pf->cur_resentries-1].name, 0,
+		PRES_MAX_NAME_LENGTH);
+	snprintf((char*)pf->rtbl->table[pf->cur_resentries-1].name,
+		PRES_MAX_NAME_LENGTH, "%s", name);
+
 
 	k_hash_final(pf->hash,
 		pf->rtbl->table[pf->cur_resentries-1].data_digest);
-
-	k_hash_reset(pf->hash);
-	k_hash_update(pf->hash, name, namelen);
-	k_hash_final(pf->hash,
-		pf->rtbl->table[pf->cur_resentries-1].filename_digest);
 
 	pf->rtbl->table[pf->cur_resentries-1].id = pf->cur_resentries;
 	pf->rtbl->table[pf->cur_resentries-1].uuid = uuid;
 	pf->rtbl->table[pf->cur_resentries-1].data_offset =
 		pf->cur_datapoolsize;
 
-	pf->rtbl->table[pf->cur_resentries-1].filename_size = namelen;
-	pf->rtbl->table[pf->cur_resentries-1].filename_offset =
-		pf->cur_stringpoolsize;
 	pf->rtbl->table[pf->cur_resentries-1].basename_offset =
 		basename_off;
-	pf->cur_stringpoolsize += namelen;
-
 	pf->cur_datapoolsize += pf->rtbl->table[pf->cur_resentries-1].data_size;
-	pf->cur_stringpoolstart = pf->cur_datapoolstart + pf->cur_datapoolsize;
-	pf->cur_rtbl_start = pf->cur_stringpoolstart + pf->cur_stringpoolsize;
+	pf->cur_rtbl_start = pf->cur_datapoolstart + pf->cur_datapoolsize;
 
 	pf->cur_filesize = pf->cur_rtbl_start + pf->dhdr.resource_table_size +
 		pf->cur_resentries*sz_res_tbl_entry;
+
+	if (_commit_meta_data(pf)) {
+		pf->cur_datapoolsize -=
+			pf->rtbl->table[pf->cur_resentries-1].data_size;
+		pf->cur_rtbl_start = pf->cur_datapoolstart +
+			pf->cur_datapoolsize;
+
+		pf->cur_resentries--;
+
+		pf->cur_filesize = pf->cur_rtbl_start +
+			pf->dhdr.resource_table_size +
+			pf->cur_resentries*sz_res_tbl_entry;
+
+		goto recoverable_err;
+	}
 
 	res = 0;
 	goto out;
@@ -327,14 +387,6 @@ static k_sc_t* _init_streamcipher
 
 	return c;
 }
-
-#if 0
-static void _cryptonce(k_sc_t* c, void* mem, const void* nonce, size_t s)
-{
-	k_sc_set_nonce(c, nonce);
-	k_sc_update(c, mem, mem, s);
-}
-#endif
 
 static int _open_pres(const char* name, uint32_t writable)
 {
@@ -460,6 +512,14 @@ static int _verify_detached_header(struct pres_file_t* pf)
 	if (rtbl_end > pf->hdr.filesize)
 		goto invalid;
 
+	uint64_t datapool_end = 0;
+	if (_addu64(&datapool_end, pf->dhdr.data_pool_start,
+	pf->dhdr.data_pool_size))
+		goto invalid;
+
+	if (datapool_end > pf->hdr.filesize)
+		goto invalid;
+
 	return 0;
 
 invalid:
@@ -485,6 +545,8 @@ static int _get_detached_header(struct pres_file_t* pf)
 		return -1;
 
 	pf->cur_rtbl_start = pf->dhdr.resource_table_start;
+	pf->cur_datapoolstart = pf->dhdr.data_pool_start;
+	pf->cur_datapoolsize = pf->dhdr.data_pool_size;
 
 	return 0;
 }
@@ -508,17 +570,9 @@ static int _verify_rtbl_entries(struct pres_file_t* pf)
 		if (memcmp(e->digest, digest_chk, digest_bytes))
 			goto invalid;
 
-		uint64_t filename_end = 0;
-		if (_addu64(&filename_end,
-		e->filename_offset + pf->rtbl->string_pool_start,
-		e->filename_size))
-			goto invalid;
-		if (filename_end > pf->hdr.filesize)
-			goto invalid;
-
 		uint64_t data_end = 0;
 		if (_addu64(&data_end,
-		e->data_offset + pf->rtbl->data_pool_start,
+		e->data_offset + pf->dhdr.data_pool_start,
 		e->data_size))
 			goto invalid;
 		if (data_end > pf->hdr.filesize)
@@ -580,25 +634,6 @@ static int _verify_rtbl(struct pres_file_t* pf)
 	if (memcmp(pf->rtbl->digest, digest_chk, digest_bytes))
 		goto invalid;
 
-	uint64_t stringpool_end = 0;
-	if (_addu64(&stringpool_end, pf->rtbl->string_pool_start,
-	pf->rtbl->string_pool_size))
-		goto invalid;
-
-	if (stringpool_end > pf->hdr.filesize)
-		goto invalid;
-
-	uint64_t datapool_end = 0;
-	if (_addu64(&datapool_end, pf->rtbl->data_pool_start,
-	pf->rtbl->data_pool_size))
-		goto invalid;
-
-	if (datapool_end > pf->hdr.filesize)
-		goto invalid;
-
-	if (!pf->rtbl->entries)
-		goto invalid;
-
 	goto valid;
 invalid:
 	res = -1;
@@ -633,11 +668,6 @@ static int _get_rtbl(struct pres_file_t* pf)
 	if (_get_rtbl_entries(pf))
 		goto fail;
 
-	pf->cur_datapoolstart = pf->rtbl->data_pool_start;
-	pf->cur_datapoolsize = pf->rtbl->data_pool_size;
-	pf->cur_stringpoolstart = pf->rtbl->string_pool_start;
-	pf->cur_stringpoolsize = pf->rtbl->string_pool_size;
-
 	return 0;
 fail:
 	if (pf->rtbl) {
@@ -647,78 +677,37 @@ fail:
 	return -1;
 }
 
-static int _verify_stringpool(struct pres_file_t* pf)
-{
-	uint8_t digest_chk[PRES_MAX_DIGEST_LENGTH];
-	size_t digest_bytes = (pf->hdr.hashsize + 7) / 8;
-
-	/* TODO: maybe don't make this a hard error. if the data is valid, we
-	 * still can export it, just the name is lost. */
-	for (uint64_t i = 0; i < pf->rtbl->entries; ++i) {
-		struct pres_resource_table_entry_t* e = &pf->rtbl->table[i];
-		/* entry was marked as deleted */
-		if (!e->id)
-			continue;
-
-		uint64_t fn_off = e->filename_offset;
-		uint64_t base_off = e->basename_offset;
-		const char* fn = pool_getmem(&pf->stringpool, fn_off);
-		uint64_t fns = strlen(fn)+1;
-		if (base_off >= fns-1)
-			goto invalid;
-
-		k_hash_reset(pf->hash);
-		k_hash_update(pf->hash, fn, fns);
-		k_hash_final(pf->hash, digest_chk);
-		if (memcmp(e->filename_digest, digest_chk, digest_bytes))
-			goto invalid;
-	}
-
-	return 0;
-invalid:
-	return -1;
-}
-
-static int _get_stringpool(struct pres_file_t* pf)
-{
-	struct mmap_t map;
-	if (pool_alloc(&pf->stringpool, PRES_IOBUF_SIZE))
-		return -1;
-
-	if (pres_map(&map, pf->fd, pf->rtbl->string_pool_size,
-		pf->rtbl->string_pool_start)) {
-		pool_free(&pf->stringpool);
-		return -1;
-	}
-
-	if (pool_append(&pf->stringpool, map.mem, pf->rtbl->string_pool_size)) {
-		pool_free(&pf->stringpool);
-		pres_unmap(&map);
-		return -1;
-	}
-
-	pres_unmap(&map);
-
-	if (pf->scipher) {
-		k_sc_set_key(pf->scipher, pf->rtbl->string_pool_iv,
-			pf->key, pf->hdr.keysize);
-		k_sc_update(pf->scipher, pf->stringpool.base,
-			pf->stringpool.base, pf->stringpool.data_size);
-	}
-
-	if (_verify_stringpool(pf)) {
-		pool_free(&pf->stringpool);
-		return -1;
-	}
-
-	return 0;
-}
-
 static int _pres_open_key
 (struct pres_file_t* pf, const char* name, const void* key, uint32_t writable)
 {
+	enum k_error_e err = K_ESUCCESS;
+	int metafd = -1;
 	memset(pf, 0, sizeof(struct pres_file_t));
 	pf->fd = -1;
+
+	size_t metanamelen = strlen(name) + sizeof(".meta");
+	pf->metaname = calloc(metanamelen, sizeof(char));
+	if (!pf->metaname)
+		goto failed;
+	snprintf(pf->metaname, metanamelen, "%s.meta", name);
+
+	/* if metafile already exist, prevent opening the container,
+	 * it's probably corrupted */
+
+	if (writable) {
+		metafd = open(pf->metaname,
+			O_CREAT | O_EXCL | O_RDWR, 0600);
+		if (metafd < 0) {
+			if (errno == EEXIST) {
+				err = K_METAEXIST;
+				goto failed;
+			} else
+				goto failed;
+		} else {
+			unlink(pf->metaname);
+			close(metafd);
+		}
+	}
 
 	pf->fd = _open_pres(name, writable);
 	if (pf->fd == -1)
@@ -747,13 +736,18 @@ static int _pres_open_key
 	if (_get_rtbl(pf))
 		goto failed;
 
-	if (_get_stringpool(pf))
-		goto failed;
-
 	pf->iobuf = malloc(PRES_IOBUF_SIZE);
 	if (!pf->iobuf)
 		goto failed;
 
+	if (!writable)
+		goto setfilepointer;
+
+	/* backup metadata */
+	if (_commit_meta_data(pf))
+		goto failed;
+
+setfilepointer:
 	if (lseek(pf->fd, pf->cur_datapoolstart+pf->cur_datapoolsize,
 	SEEK_SET) == -1)
 		goto failed;
@@ -762,6 +756,8 @@ static int _pres_open_key
 	pf->is_writable = writable;
 	return 0;
 failed:
+	if (pf->metaname)
+		free(pf->metaname);
 	if (pf->key)
 		k_free(pf->key);
 	if (pf->hash)
@@ -774,11 +770,10 @@ failed:
 		k_sc_finish(pf->scipher);
 	if (pf->rtbl)
 		free(pf->rtbl);
-	if (pf->stringpool.alloced)
-		pool_free(&pf->stringpool);
 	if (pf->fd != -1)
 		close(pf->fd);
 	memset(pf, 0, sizeof(struct pres_file_t));
+	k_error(err);
 	return -1;
 }
 
@@ -859,13 +854,12 @@ static int _set_file_header
 
 	pf->cur_rtbl_start = sz_detached_hdr + sz_file_header;
 	pf->cur_datapoolstart = sz_detached_hdr + sz_file_header;
-	pf->cur_stringpoolstart = sz_detached_hdr + sz_file_header;
 	pf->cur_filesize = sz_file_header + sz_detached_hdr + sz_res_tbl;
 
 	if (!pf->hdr.hashsize)
 		return -1;
 
-	strncpy(pf->hdr.libk_version_string, k_version_string(),
+	strncpy((char*)pf->hdr.libk_version_string, k_version_string(),
 		(sizeof(pf->hdr.libk_version_string)) - 1);
 
 	return 0;
@@ -928,10 +922,17 @@ __export_function int k_pres_create
 	if (pf->fd == -1)
 		goto err_out;
 
-	if (pool_alloc(&pf->stringpool, PRES_IOBUF_SIZE))
+	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
 		goto err_out;
 
-	if (lseek(pf->fd, pf->cur_datapoolstart, SEEK_SET) == -1)
+	/* backup metadata */
+	size_t metanamelen = strlen(opt->name) + sizeof(".meta");
+	pf->metaname = calloc(metanamelen, sizeof(char));
+	if (!pf->metaname)
+		goto err_out;
+	snprintf(pf->metaname, metanamelen, "%s.meta", opt->name);
+
+	if (_commit_meta_data(pf))
 		goto err_out;
 
 	pf->is_open = 1;
@@ -939,12 +940,12 @@ __export_function int k_pres_create
 	return 0;
 
 err_out:
+	if (pf->metaname)
+		free(pf->metaname);
 	if (pf->iobuf)
 		free(pf->iobuf);
 	if (pf->hash)
 		k_hash_finish(pf->hash);
-	if (pf->stringpool.alloced)
-		pool_free(&pf->stringpool);
 	if (pf->prng)
 		k_prng_finish(pf->prng);
 	if (pf->scipher)
@@ -963,72 +964,60 @@ static int _commit_and_close(struct pres_file_t* pf)
 {
 	uint8_t dhdr_nonce[PRES_MAX_IV_LENGTH];
 	uint8_t rtbl_nonce[PRES_MAX_IV_LENGTH];
-	uint8_t spool_nonce[PRES_MAX_IV_LENGTH];
+
 	size_t s;
 	int res = 0;
 
-	if (pf->is_corrupt)
+	if (pf->is_corrupt) {
 		goto err_out;
+	}
 
 	if (pf->scipher) {
 		memset(dhdr_nonce, 0, PRES_MAX_IV_LENGTH);
 		memset(rtbl_nonce, 0, PRES_MAX_IV_LENGTH);
-		memset(spool_nonce, 0, PRES_MAX_IV_LENGTH);
 		k_prng_update(pf->prng, dhdr_nonce, pf->nonce_size);
 		k_prng_update(pf->prng, rtbl_nonce, pf->nonce_size);
-		k_prng_update(pf->prng, spool_nonce, pf->nonce_size);
 	}
-
-	pf->hdr.filesize = pf->cur_filesize;
-	pf->dhdr.resource_table_start = pf->cur_rtbl_start;
-	pf->rtbl->entries = pf->cur_resentries;
-	pf->rtbl->data_pool_start = pf->cur_datapoolstart;
-	pf->rtbl->data_pool_size = pf->cur_datapoolsize;
-	pf->rtbl->string_pool_start = pf->cur_stringpoolstart;
-	pf->rtbl->string_pool_size = pf->cur_stringpoolsize;
 
 	if (pf->scipher) {
 		memcpy(pf->hdr.detached_header_iv, dhdr_nonce, pf->nonce_size);
 		memcpy(pf->dhdr.resource_table_iv, rtbl_nonce, pf->nonce_size);
-		memcpy(pf->rtbl->string_pool_iv, spool_nonce, pf->nonce_size);
 	}
 
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, &pf->hdr, sz_header_digest);
 	k_hash_final(pf->hash, pf->hdr.digest);
-	if (lseek(pf->fd, 0, SEEK_SET) == -1)
+	if (lseek(pf->fd, 0, SEEK_SET) == -1) {
 		goto err_out;
+	}
 	s = sz_file_header;
-	if (write(pf->fd, &pf->hdr, s) != s)
+	if (write(pf->fd, &pf->hdr, s) != s) {
 		goto err_out;
+	}
 
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, &pf->dhdr, sz_dheader_digest);
 	k_hash_final(pf->hash, pf->dhdr.digest);
 
-	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1)
+	if (lseek(pf->fd, pf->hdr.detached_header_start, SEEK_SET) == -1) {
 		goto err_out;
+	}
 	s = sz_detached_hdr;
+
+	/* keep plain before encrypting it */
+	uint64_t resource_table_start = pf->dhdr.resource_table_start;
 	if (pf->scipher) {
 		k_sc_set_key(pf->scipher, dhdr_nonce,
 			pf->key, pf->hdr.keysize);
 		k_sc_update(pf->scipher, &pf->dhdr, &pf->dhdr, s);
 	}
-	if (write(pf->fd, &pf->dhdr, s) != s)
+	if (write(pf->fd, &pf->dhdr, s) != s) {
 		goto err_out;
-
-	if (lseek(pf->fd, pf->rtbl->string_pool_start, SEEK_SET) == -1)
-		goto err_out;
-	s = pf->stringpool.data_size;
-	if (pf->scipher) {
-		k_sc_set_key(pf->scipher, spool_nonce,
-			pf->key, pf->hdr.keysize);
-		k_sc_update(pf->scipher, pf->stringpool.base,
-			pf->stringpool.base, s);
 	}
-	if (write(pf->fd, pf->stringpool.base, s) != s)
-		goto err_out;
 
+	if (lseek(pf->fd, resource_table_start, SEEK_SET) == -1) {
+		goto err_out;
+	}
 	k_hash_reset(pf->hash);
 	k_hash_update(pf->hash, pf->rtbl, sz_rtbl_digest);
 	k_hash_final(pf->hash, pf->rtbl->digest);
@@ -1039,19 +1028,22 @@ static int _commit_and_close(struct pres_file_t* pf)
 		k_hash_final(pf->hash, pf->rtbl->table[i].digest);
 	}
 
-	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1)
+	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1) {
 		goto err_out;
+	}
 	s = sz_res_tbl + pf->rtbl->entries*sz_res_tbl_entry;
 	if (pf->scipher) {
 		k_sc_set_key(pf->scipher, rtbl_nonce,
 			pf->key, pf->hdr.keysize);
 		k_sc_update(pf->scipher, pf->rtbl, pf->rtbl, s);
 	}
-	if (write(pf->fd, pf->rtbl, s) != s)
+	if (write(pf->fd, pf->rtbl, s) != s) {
 		goto err_out;
+	}
 
 	res = k_tcommit_and_close(pf->fd);
-
+	if (!res)
+		unlink(pf->metaname);
 	goto out;
 err_out:
 	k_trollback_and_close(pf->fd);
@@ -1063,14 +1055,14 @@ out:
 		k_prng_finish(pf->prng);
 	if (pf->scipher)
 		k_sc_finish(pf->scipher);
-	if (pf->stringpool.alloced)
-		pool_free(&pf->stringpool);
 	if (pf->rtbl)
 		free(pf->rtbl);
 	if (pf->iobuf)
 		free(pf->iobuf);
 	if (pf->key)
 		k_free(pf->key);
+	if (pf->metaname)
+		free(pf->metaname);
 	memset(pf, 0, sizeof(struct pres_file_t));
 	return res;
 }
@@ -1092,8 +1084,7 @@ __export_function const char* k_pres_res_name_by_id
 		if (basename)
 			*basename = "";
 	} else {
-		res = pool_getmem(&pf->stringpool,
-			table[id-1].filename_offset);
+		res = (const char*)table[id-1].name;
 		if (basename)
 			*basename = res + table[id-1].basename_offset;
 	}
@@ -1110,9 +1101,7 @@ __export_function uint64_t k_pres_res_id_by_name
 		/* entry was marked as deleted */
 		if (!table[i].id)
 			continue;
-		size_t fn_off = table[i].filename_offset;
-		const char* fn = pool_getmem(&pf->stringpool, fn_off);
-		if (!strcmp(fn, name))
+		if (!strcmp((const char*)table[i].name, name))
 			return table[i].id;
 	}
 	return 0;
@@ -1145,11 +1134,11 @@ __export_function int k_pres_res_open
 		return -1;
 
 	res->uuid = table[id-1].uuid;
-	res->name = pool_getmem(&pf->stringpool, table[id-1].filename_offset);
+	res->name = (const char*)table[id-1].name;
 	res->basename_offset = table[id-1].basename_offset;
 	res->digest = table[id-1].data_digest;
 	res->size = table[id-1].data_size;
-	res->absoff = pf->rtbl->data_pool_start+table[id-1].data_offset;
+	res->absoff = pf->dhdr.data_pool_start+table[id-1].data_offset;
 	res->fd = pf->fd;
 	res->scipher = pf->scipher;
 	if (res->scipher) {
@@ -1246,14 +1235,14 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 			k_prng_finish(pf->prng);
 		if (pf->scipher)
 			k_sc_finish(pf->scipher);
-		if (pf->stringpool.alloced)
-			pool_free(&pf->stringpool);
 		if (pf->rtbl)
 			free(pf->rtbl);
 		if (pf->iobuf)
 			free(pf->iobuf);
 		if (pf->key)
 			k_free(pf->key);
+		if (pf->metaname)
+			free(pf->metaname);
 		memset(pf, 0, sizeof(struct pres_file_t));
 		return 0;
 	}
@@ -1262,8 +1251,20 @@ __export_function int k_pres_close(struct pres_file_t* pf)
 __export_function void k_pres_delete_id
 (struct pres_file_t* pf, uint64_t id)
 {
+	struct pres_resource_table_entry_t e;
 	struct pres_resource_table_entry_t* table = pf->rtbl->table;
+
+	/* TODO: return error code */
+	if (!pf->is_writable)
+		return;
+
+	memcpy(&e, &table[id-1], sz_res_tbl_entry);
 	memset(&table[id-1], 0, sz_res_tbl_entry);
+	/* TODO: return error code */
+	if (_commit_meta_data(pf)) {
+		memcpy(&table[id-1], &e, sz_res_tbl_entry);
+		return;
+	}
 }
 
 __export_function int k_pres_export_id

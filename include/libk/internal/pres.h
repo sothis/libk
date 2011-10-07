@@ -20,6 +20,8 @@
  * version change */
 #define PRES_VER		(0x00000004u)
 #define PRES_MAGIC		(0x0701198123421337ull)
+#define PRES_MAX_NAME_LENGTH	(256ull)
+#define PRES_MAX_VERSION_LENGTH	(256ull)
 #define PRES_MAX_DIGEST_LENGTH	(128ull)
 #define PRES_MAX_IV_LENGTH	(128ull)
 #define PRES_MAX_SIG_LENGTH	(32768ull)
@@ -60,7 +62,7 @@ struct pres_file_header_t {
 	uint32_t	tweaksize;
 	uint64_t	filesize;
 
-	char		libk_version_string[256];
+	uint8_t		libk_version_string[PRES_MAX_VERSION_LENGTH];
 
 	uint64_t	detached_header_size;
 	uint64_t	detached_header_start;
@@ -78,6 +80,9 @@ struct pres_file_header_t {
 } __attribute__((packed));
 
 struct pres_detached_header_t {
+	uint64_t	data_pool_size;
+	uint64_t	data_pool_start;
+
 	uint64_t	resource_table_size;
 	uint64_t	resource_table_start;
 	uint8_t		resource_table_iv[PRES_MAX_IV_LENGTH];
@@ -92,12 +97,6 @@ struct pres_resource_table_entry_t {
 	uint64_t	uuid;
 	uint64_t	basename_offset;
 
-	/* relative pointer into string pool */
-	uint64_t	filename_size;
-	uint64_t	filename_offset;
-//	uint8_t		filename_signature[PRES_MAX_SIG_LENGTH];
-	uint8_t		filename_digest[PRES_MAX_DIGEST_LENGTH];
-
 	/* relative pointer into data pool */
 	uint64_t	data_size;
 	uint64_t	data_offset;
@@ -105,19 +104,14 @@ struct pres_resource_table_entry_t {
 //	uint8_t		data_signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		data_digest[PRES_MAX_DIGEST_LENGTH];
 
+	uint8_t		name[PRES_MAX_NAME_LENGTH];
+
 //	uint8_t		signature[PRES_MAX_SIG_LENGTH];
 	uint8_t		digest[PRES_MAX_DIGEST_LENGTH];
 } __attribute__((packed));
 
 struct pres_resource_table_t {
 	uint64_t			entries;
-
-	uint64_t			string_pool_size;
-	uint64_t			string_pool_start;
-	uint8_t				string_pool_iv[PRES_MAX_IV_LENGTH];
-
-	uint64_t			data_pool_size;
-	uint64_t			data_pool_start;
 
 //	uint8_t				signature[PRES_MAX_SIG_LENGTH];
 	uint8_t				digest[PRES_MAX_DIGEST_LENGTH];
@@ -133,9 +127,11 @@ struct mmap_t {
 
 struct pres_file_t {
 	int				fd;
+	int				metafd;
 	int				is_writable;
 	int				is_open;
 	int				is_corrupt;
+	char*				metaname;
 	k_hash_t*			hash;
 	k_sc_t*				scipher;
 	k_prng_t*			prng;
@@ -146,11 +142,8 @@ struct pres_file_t {
 	uint64_t			cur_allocedentries;
 	uint64_t			cur_datapoolstart;
 	uint64_t			cur_datapoolsize;
-	uint64_t			cur_stringpoolstart;
-	uint64_t			cur_stringpoolsize;
 	uint8_t*			iobuf;
 	void*				key;
-	struct mempool_t		stringpool;
 	struct pres_file_header_t	hdr;
 	struct pres_detached_header_t	dhdr;
 	struct pres_resource_table_t*	rtbl;
@@ -185,6 +178,7 @@ struct pres_options_t {
 	uint32_t		hashsize;
 	/* mandatory if a cipher is set */
 	uint32_t		keysize;
+
 	/* optional, depends on the selected cipher, currently unused */
 	uint32_t		tweaksize;
 
