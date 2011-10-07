@@ -49,14 +49,6 @@ else ifeq ($(PLATFORM), MINGW32_NT-6.1)
 	PLAT_WINNT	:= Yes
 	PLATFORM	:= WINNT
 	SO_EXT		:= dll
-else ifeq ($(PLATFORM), MINGW32_NT-5.1)
-	PLAT_WINNT	:= Yes
-	PLATFORM	:= WINNT
-	SO_EXT		:= dll
-else ifeq ($(PLATFORM), CYGWIN_NT-6.1-WOW64)
-	PLAT_WINNT	:= Yes
-	PLATFORM	:= WINNT
-	SO_EXT		:= dll
 else
 $(error unsupported platform: $(PLATFORM))
 endif
@@ -133,6 +125,12 @@ SRC		+= ./src/hash/sha1/sha1.c
 
 SRC		+= ./src/kderive/simple.c
 
+SRC		+= ./src/pres/filedesc.c
+SRC		+= ./src/pres/open.c
+SRC		+= ./src/pres/close.c
+SRC		+= ./src/pres/read.c
+SRC		+= ./src/pres/write.c
+
 SRC		+= ./src/utils/pres.c
 SRC		+= ./src/utils/tfile.c
 SRC		+= ./src/utils/mem.c
@@ -141,8 +139,8 @@ SRC		+= ./src/utils/workbench.c
 SRC		+= ./src/utils/unittest.c
 SRC		+= ./src/utils/mempool.c
 SRC		+= ./src/utils/ioutils.c
-
 SRC		+= ./src/utils/benchmark.c
+
 SRC		+= ./src/bench/bench_aes.c
 SRC		+= ./src/bench/bench_skein.c
 SRC		+= ./src/bench/bench_threefish.c
