@@ -29,35 +29,6 @@ endif
 PLATFORM	:= $(shell uname)
 PWD		:= $(shell pwd)
 
-GCC_MAJOR	:= 0
-GCC_MINOR	:= 0
-ifeq ($(CONF), debug)
-	DEBUG		:= Yes
-endif
-ifeq ($(CONF), release)
-	RELEASE		:= Yes
-endif
-ifeq ($(CLANGEXISTS), 0)
-	HAVE_CLANG	:= Yes
-endif
-ifeq ($(GCCEXISTS), 0)
-	HAVE_GCC	:= Yes
-ifneq ($(PLATFORM), MINGW32_NT-6.1)
-# TODO: write shellscript in order to get detailed compiler version information
-# and advanced testing possibilities (i.e. greater/less than, not just equality)
-	GCC_MAJOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
-		cut -d' ' -f3 | cut -d'.' -f1)
-	GCC_MINOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
-		cut -d' ' -f3 | cut -d'.' -f1)
-endif
-endif
-ifeq ($(ICCEXISTS), 0)
-	HAVE_ICC	:= Yes
-endif
-ifndef VERBOSE
-	VERB		:= -s
-endif
-
 ifeq ($(PLATFORM), Linux)
 	PLAT_LINUX	:= Yes
 	PLATFORM	:= LINUX
@@ -90,6 +61,35 @@ else
 $(error unsupported platform: $(PLATFORM))
 endif
 
+GCC_MAJOR	:= 0
+GCC_MINOR	:= 0
+ifeq ($(CONF), debug)
+	DEBUG		:= Yes
+endif
+ifeq ($(CONF), release)
+	RELEASE		:= Yes
+endif
+ifeq ($(CLANGEXISTS), 0)
+	HAVE_CLANG	:= Yes
+endif
+ifeq ($(GCCEXISTS), 0)
+	HAVE_GCC	:= Yes
+ifdef PLAT_WINNT
+# TODO: write shellscript in order to get detailed compiler version information
+# and advanced testing possibilities (i.e. greater/less than, not just equality)
+	GCC_MAJOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
+		cut -d' ' -f3 | cut -d'.' -f1)
+	GCC_MINOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
+		cut -d' ' -f3 | cut -d'.' -f1)
+endif
+endif
+ifeq ($(ICCEXISTS), 0)
+	HAVE_ICC	:= Yes
+endif
+ifndef VERBOSE
+	VERB		:= -s
+endif
+
 ################################################################################
 
 LIBRARIES	+= -lpthread
@@ -100,8 +100,9 @@ endif
 INCLUDES	+= -I./src
 INCLUDES	+= -I./include
 
-SRC		+= ./src/version.c
 .PHONY: ./src/version.c
+SRC		+= ./src/version.c
+
 
 SRC		+= ./src/blockcipher/blockcipher.c
 SRC		+= ./src/blockcipher/modes/noop.c
