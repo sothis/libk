@@ -146,6 +146,9 @@ __export_function int k_pres_init_new_resource
 		}
 	}
 
+	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1) {
+		return -1;
+
 	if (pf->cur_allocedentries < (pf->cur_resentries+1)) {
 		pf->cur_allocedentries += 32768;
 		void* temp = realloc(pf->rtbl,
@@ -165,6 +168,7 @@ __export_function int k_pres_init_new_resource
 		memcpy(pf->rtbl->table[pf->cur_resentries].data_iv,
 			data_nonce, pf->nonce_size);
 	}
+
 	pf->rtbl->table[pf->cur_resentries].data_size = 0;
 
 	goto out;
