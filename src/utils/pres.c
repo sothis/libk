@@ -146,7 +146,7 @@ __export_function int k_pres_init_new_resource
 		}
 	}
 
-	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1) {
+	if (lseek(pf->fd, pf->cur_rtbl_start, SEEK_SET) == -1)
 		return -1;
 
 	if (pf->cur_allocedentries < (pf->cur_resentries+1)) {
