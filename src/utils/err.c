@@ -211,7 +211,7 @@ void k_post_error
 	if (handle_err == &_default_err_handler)
 		fprintf(stderr, "%s:%u -> ", file, line);
 	kerrno = err;
-	handle_err(err, lvl, _err_messages[err]);
+	handle_err(err, lvl, _err_messages[ERR_IDX(err)]);
 }
 
 __export_function void k_set_error_handler
