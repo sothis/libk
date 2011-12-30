@@ -7,3 +7,6 @@ bin
 *.pidb
 *.userprefs
 *.pres
+libs/cache/*
+libs/local/*
+libs/local32/*
