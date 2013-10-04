@@ -78,6 +78,10 @@ else ifeq ($(PLATFORM), MINGW32_NT-6.1)
 	PLAT_WINNT	:= Yes
 	PLATFORM	:= WINNT
 	SO_EXT		:= dll
+else ifeq ($(PLATFORM), MINGW32_NT-6.2)
+	PLAT_WINNT	:= Yes
+	PLATFORM	:= WINNT
+	SO_EXT		:= dll
 else
 $(error unsupported platform: $(PLATFORM))
 endif

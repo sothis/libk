@@ -16,8 +16,15 @@
 #include <direct.h>
 
 #define lseek lseek64
+
+#ifndef fstat
 #define fstat fstat64
+#endif
+
+#ifndef stat
 #define stat stat64
+#endif
+
 #define off_t off64_t
 
 #define MAP_FAILED	((void*)~0ul)
