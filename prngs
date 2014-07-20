@@ -1,0 +1,2 @@
+SRC	+= ./src/prng/platform.c
+SRC	+= ./src/prng/mt19937.c

@@ -96,36 +96,6 @@ endif
 INCLUDES	+= -I./src
 INCLUDES	+= -I./include
 
-SRC		+= ./src/version.c
-.PHONY: ./src/version.c
-
-SRC		+= ./src/blockcipher/blockcipher.c
-SRC		+= ./src/blockcipher/modes/noop.c
-SRC		+= ./src/blockcipher/modes/ecb.c
-SRC		+= ./src/blockcipher/modes/cbc.c
-SRC		+= ./src/blockcipher/modes/cfb.c
-SRC		+= ./src/blockcipher/modes/ofb.c
-SRC		+= ./src/blockcipher/modes/ctr.c
-SRC		+= ./src/blockcipher/modes/tests.c
-SRC		+= ./src/blockcipher/ciphers/threefish/threefish256.c
-SRC		+= ./src/blockcipher/ciphers/threefish/threefish512.c
-SRC		+= ./src/blockcipher/ciphers/threefish/threefish1024.c
-SRC		+= ./src/blockcipher/ciphers/aes/aes.c
-
-SRC		+= ./src/streamcipher/streamcipher.c
-SRC		+= ./src/streamcipher/arc4.c
-
-SRC		+= ./src/prng/prng.c
-SRC		+= ./src/prng/platform.c
-SRC		+= ./src/prng/mt19937.c
-
-SRC		+= ./src/hash/hash.c
-SRC		+= ./src/hash/skein/skein_common.c
-SRC		+= ./src/hash/skein/skein256.c
-SRC		+= ./src/hash/skein/skein512.c
-SRC		+= ./src/hash/skein/skein1024.c
-SRC		+= ./src/hash/sha1/sha1.c
-
 SRC		+= ./src/utils/mem.c
 SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
@@ -137,6 +107,25 @@ SRC		+= ./src/bench/bench_skein.c
 SRC		+= ./src/bench/bench_threefish.c
 
 SRCBIN		+= ./src/ktool/main.c
+
+.PHONY:		./src/version.c
+SRC		+= ./src/version.c
+
+SRC		+= ./src/blockcipher/blockcipher.c
+include		./blockciphers
+
+SRC		+= ./src/blockcipher/modes/tests.c
+include		./blockcipher_modes
+
+SRC		+= ./src/streamcipher/streamcipher.c
+include		./streamciphers
+
+SRC		+= ./src/prng/prng.c
+include		./prngs
+
+SRC		+= ./src/hash/hash.c
+include		./hashsums
+
 
 ################################################################################
 

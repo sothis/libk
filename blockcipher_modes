@@ -1,0 +1,6 @@
+SRC	+= ./src/blockcipher/modes/noop.c
+SRC	+= ./src/blockcipher/modes/ecb.c
+SRC	+= ./src/blockcipher/modes/cbc.c
+SRC	+= ./src/blockcipher/modes/cfb.c
+SRC	+= ./src/blockcipher/modes/ofb.c
+SRC	+= ./src/blockcipher/modes/ctr.c

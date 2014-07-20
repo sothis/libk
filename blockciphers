@@ -1,0 +1,4 @@
+SRC	+= ./src/blockcipher/ciphers/threefish/threefish256.c
+SRC	+= ./src/blockcipher/ciphers/threefish/threefish512.c
+SRC	+= ./src/blockcipher/ciphers/threefish/threefish1024.c
+SRC	+= ./src/blockcipher/ciphers/aes/aes.c
