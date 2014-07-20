@@ -50,7 +50,4 @@ extern uint32_t k_version_minor
 extern uint32_t k_version_patchlevel
 (void);
 
-extern void* _k_key_derive_simple1024
-(const char* pass,void* salt,uint64_t iter);
-
 #endif /* _LIBK_H */

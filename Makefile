@@ -126,8 +126,6 @@ SRC		+= ./src/hash/skein/skein512.c
 SRC		+= ./src/hash/skein/skein1024.c
 SRC		+= ./src/hash/sha1/sha1.c
 
-SRC		+= ./src/kderive/simple.c
-
 SRC		+= ./src/utils/mem.c
 SRC		+= ./src/utils/err.c
 SRC		+= ./src/utils/workbench.c
