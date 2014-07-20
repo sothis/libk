@@ -8,75 +8,9 @@
  * worldwide. This software is distributed without any warranty.
 */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <inttypes.h>
-
-#ifndef __WINNT__
-#define MKDIR_MODE ,0700
-#else
-#include <windows.h>
-#define MKDIR_MODE
-#endif
-
+#include <string.h>
 #include <libk/libk.h>
-
-#ifndef __WINNT__
-static void __term_handler(int sig, siginfo_t* info, void* unused)
-{
-	printf("\n");
-	exit(0);
-}
-#endif
-
-
-#ifdef __WINNT__
-static uint32_t oldicp, oldocp;
-static void __cleanup(void)
-{
-	SetConsoleOutputCP(oldocp);
-	SetConsoleCP(oldicp);
-}
-#endif
-
-static void __init(void)
-{
-#ifndef __WINNT__
-	struct sigaction sa;
-
-	if (sigemptyset(&sa.sa_mask))
-		exit(1);
-
-	sa.sa_flags = SA_SIGINFO;
-	sa.sa_sigaction = __term_handler;
-
-	/* SIGPIPE, SIGABRT and friends are considered as bugs. no cleanup
-	 * in these cases, fix the program or replace defective
-	 * hardware :) */
-	if (sigaction(SIGHUP, &sa, 0))
-		exit(1);
-	if (sigaction(SIGINT, &sa, 0))
-		exit(1);
-	if (sigaction(SIGQUIT, &sa, 0))
-		exit(1);
-	if (sigaction(SIGTERM, &sa, 0))
-		exit(1);
-#else
-	atexit(__cleanup);
-	oldicp = GetConsoleCP();
-	oldocp = GetConsoleOutputCP();
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
-#endif
-}
-
 
 static void print_help(void)
 {
@@ -93,8 +27,6 @@ static void print_help(void)
 
 int main(int argc, char* argv[], char* envp[])
 {
-	__init();
-
 	if (argc < 2) {
 		print_help();
 		return -1;
