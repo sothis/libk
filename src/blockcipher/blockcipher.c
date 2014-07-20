@@ -99,6 +99,7 @@ static inline void free_mode_resources
 	c->keysize = 0;
 	c->workbench = 0;
 	c->worker_ivs = 0;
+	c->iv_backup = 0;
 	c->worker_threads = 1;
 }
 
