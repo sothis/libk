@@ -104,6 +104,7 @@ unittest(_name, _desc)							\
 	uint32_t bs = k_bc_get_blocksize(c);				\
 	if (k_bcmode_set_key(c, _key_192, sizeof(_key_192)*8, _type)) {	\
 		*details = "k_bcmode_set_key failed";			\
+		k_bc_finish(c);						\
 		return -1;						\
 	}								\
 	k_bcmode_set_iv(c, _iv);					\
