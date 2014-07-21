@@ -52,9 +52,7 @@
     <Compile Include="Streamcipher.cs" />
     <Compile Include="Hash.cs" />
     <Compile Include="UnmanagedError.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\..\..\include\libk\internal\errors.h" />
+    <Compile Include="Errors.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
