@@ -1,4 +1,5 @@
 build/*
+cov-int/*
 .DS_Store
 .gitconfig
 obj
