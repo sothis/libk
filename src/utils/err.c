@@ -104,12 +104,7 @@ static const char* const _err_messages[] = {
 		"see 'ulimit'",
 	"the hashsum was marked as insecure",
 	"cannot open unix random device",
-	"file header digest does not match (file corrupt)",
-	"detached file header digest does not match\n"
-		"(wrong password or file corrupt)",
 	"mode is not suitable for streamcipher usage",
-	"metadata file exists, container is probably corrupted but can be "
-		"repaired",
 };
 
 static void _default_err_handler
