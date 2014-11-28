@@ -102,6 +102,12 @@ SRC		+= ./src/utils/workbench.c
 SRC		+= ./src/utils/unittest.c
 SRC		+= ./src/utils/benchmark.c
 
+SRC		+= ./src/mp/workerpool.c
+SRC		+= ./src/mp/queue.c
+SRC		+= ./src/mp/thread.c
+SRC		+= ./src/mp/mutex.c
+SRC		+= ./src/mp/cond.c
+
 SRC		+= ./src/bench/bench_aes.c
 SRC		+= ./src/bench/bench_skein.c
 SRC		+= ./src/bench/bench_threefish.c
