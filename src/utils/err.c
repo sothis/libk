@@ -196,6 +196,9 @@ static void _init_error_handling(void)
 __attribute__((destructor))
 static void _fini_error_handling(void)
 {
+	kerror_t* r = pthread_getspecific(tls_kerrno);
+	if (r)
+		free(r);
 	pthread_key_delete(tls_error_handler);
 	pthread_key_delete(tls_kerrno);
 }
