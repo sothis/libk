@@ -3,7 +3,7 @@ VERSION		:= $(shell ./version)
 UNAMEEXISTS	:= $(shell uname > /dev/null 2>&1; echo $$?)
 PWDEXISTS	:= $(shell pwd > /dev/null 2>&1; echo $$?)
 GCCEXISTS	:= $(shell gcc --version > /dev/null 2>&1; echo $$?)
-#CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
+CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
 #ICCEXISTS	:= $(shell icc --version > /dev/null 2>&1; echo $$?)
 GITEXISTS	:= $(shell git --version > /dev/null 2>&1; echo $$?)
 TAREXISTS	:= $(shell tar --version > /dev/null 2>&1; echo $$?)
@@ -171,6 +171,7 @@ DEFINES		+= -D_WIN32=1
 DEFINES		+= -DWIN32=1
 endif
 DEFINES		+= -D_BSD_SOURCE=1
+DEFINES		+= -D_DEFAULT_SOURCE=1
 DEFINES		+= -D_FILE_OFFSET_BITS=64
 DEFINES		+= -D_LARGEFILE64_SOURCE=1
 DEFINES		+= -D_LARGEFILE_SOURCE=1
