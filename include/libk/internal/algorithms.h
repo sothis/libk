@@ -12,7 +12,7 @@
 
 enum keytype_e {
 	BLK_CIPHER_KEY_ENCRYPT	= 0,
-	BLK_CIPHER_KEY_DECRYPT	= 1,
+	BLK_CIPHER_KEY_DECRYPT	= 1
 };
 
 enum blockcipher_e {
@@ -21,9 +21,7 @@ enum blockcipher_e {
 	BLK_CIPHER_THREEFISH_512		= 2,
 	BLK_CIPHER_THREEFISH_1024		= 3,
 	BLK_CIPHER_AES				= 4,
-	/* insert new block ciphers above this line and adjust
-	 * BLK_CIPHER_MAX_SUPPORT below accordingly */
-	BLK_CIPHER_MAX_SUPPORT			= BLK_CIPHER_AES
+	BLK_CIPHER_MAX
 };
 
 enum bcmode_e {
@@ -33,35 +31,27 @@ enum bcmode_e {
 	BLK_CIPHER_MODE_CFB			= 3,
 	BLK_CIPHER_MODE_OFB			= 4,
 	BLK_CIPHER_MODE_CTR			= 5,
-	/* insert new modes above this line and adjust
-	 * BLK_CIPHER_MODE_MAX_SUPPORT below accordingly */
-	BLK_CIPHER_MODE_MAX_SUPPORT		= BLK_CIPHER_MODE_CTR
+	BLK_CIPHER_MODE_MAX
 };
 
 enum streamcipher_e {
 	STREAM_CIPHER_NOOP			= 0,
 	STREAM_CIPHER_ARC4			= 1,
-	/* insert new stream ciphers above this line and adjust
-	 * STREAM_CIPHER_MAX_SUPPORT below accordingly */
-	STREAM_CIPHER_MAX_SUPPORT		= STREAM_CIPHER_ARC4
+	STREAM_CIPHER_MAX
 };
 
 enum hashsum_e {
-	HASHSUM_NOOP			= 0,
-	HASHSUM_SKEIN_256		= 1,
-	HASHSUM_SKEIN_512		= 2,
-	HASHSUM_SKEIN_1024		= 3,
-	HASHSUM_SHA1			= 4,
-	/* insert new hashsum above this line and adjust
-	 * HASHSUM_MAX_SUPPORT below accordingly */
-	HASHSUM_MAX_SUPPORT		= HASHSUM_SHA1
+	HASHSUM_NOOP				= 0,
+	HASHSUM_SKEIN_256			= 1,
+	HASHSUM_SKEIN_512			= 2,
+	HASHSUM_SKEIN_1024			= 3,
+	HASHSUM_SHA1				= 4,
+	HASHSUM_MAX
 };
 
 enum prng_e {
 	PRNG_NOOP				= 0,
 	PRNG_PLATFORM				= 1,
 	PRNG_MT19937_32				= 2,
-	/* insert new prngs above this line and adjust
-	 * PRNG_MAX_SUPPORT below accordingly */
-	PRNG_MAX_SUPPORT			= PRNG_MT19937_32
+	PRNG_MAX
 };

@@ -435,7 +435,7 @@ static int _verify_file_header(struct pres_file_t* pf)
 		goto invalid;
 	if (pf->hdr.filesize != st.st_size)
 		goto invalid;
-	if (!hashfn || hashfn > HASHSUM_MAX_SUPPORT)
+	if (!hashfn || hashfn >= HASHSUM_MAX)
 		goto invalid;
 	if (!digest_bytes || digest_bytes > PRES_MAX_DIGEST_LENGTH)
 		goto invalid;
@@ -451,13 +451,13 @@ static int _verify_file_header(struct pres_file_t* pf)
 		goto invalid;
 	}
 
-	if (pf->hdr.ciphermode > BLK_CIPHER_MODE_MAX_SUPPORT)
+	if (pf->hdr.ciphermode >= BLK_CIPHER_MODE_MAX)
 		goto invalid;
 
 	if (pf->hdr.ciphermode) {
-		if (!pf->hdr.cipher || pf->hdr.cipher > BLK_CIPHER_MAX_SUPPORT)
+		if (!pf->hdr.cipher || pf->hdr.cipher >= BLK_CIPHER_MAX)
 			goto invalid;
-	} else if (pf->hdr.cipher && pf->hdr.cipher > STREAM_CIPHER_MAX_SUPPORT)
+	} else if (pf->hdr.cipher && pf->hdr.cipher >= STREAM_CIPHER_MAX)
 		goto invalid;
 
 	if (pf->hdr.cipher && !pf->hdr.keysize)
