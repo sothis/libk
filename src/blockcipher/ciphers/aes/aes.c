@@ -1214,7 +1214,7 @@ blockcipher_start(AES, "Rijndael, Advanced Encryption Standard")
 	.insecure		= 0,
 	.block_size		= aes_block_size,
 	.key_range		= key_range,
-	.insecure_key_range	= insecure_key_range,
+	/* .insecure_key_range	= insecure_key_range, */
 	.schedule_size		= sizeof(struct aes_key_schedule_t),
 	.set_encrypt_key	= &aes_set_encrypt_key,
 	.set_decrypt_key	= &aes_set_decrypt_key,
