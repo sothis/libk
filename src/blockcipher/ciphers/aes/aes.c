@@ -1204,17 +1204,21 @@ static const struct range32_t key_range[] = {
 	{ 0 }
 };
 
+#ifdef COMPLY_WITH_FORMAL_SECURITY
 static const struct range32_t insecure_key_range[] = {
 	{ .from = 256, .to = 256 },
 	{ 0 }
 };
+#endif
 
 blockcipher_start(AES, "Rijndael, Advanced Encryption Standard")
 	.authors		= authors,
 	.insecure		= 0,
 	.block_size		= aes_block_size,
 	.key_range		= key_range,
-	/* .insecure_key_range	= insecure_key_range, */
+#ifdef COMPLY_WITH_FORMAL_SECURITY
+	.insecure_key_range	= insecure_key_range,
+#endif
 	.schedule_size		= sizeof(struct aes_key_schedule_t),
 	.set_encrypt_key	= &aes_set_encrypt_key,
 	.set_decrypt_key	= &aes_set_decrypt_key,
