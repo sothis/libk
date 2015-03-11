@@ -824,7 +824,7 @@ __export_function int k_pres_open
 			k_hash_finish(pf->hash);
 
 		key = _k_key_derive_simple1024(pass,
-			pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
+			pf->hdr.kdf_salt, 128, PRES_KDF_ITERATIONS);
 	}
 
 	res = _pres_open_key(pf, name, key, writable);
@@ -906,7 +906,7 @@ __export_function int k_pres_create
 			k_prng_update(pf->prng, pf->hdr.kdf_salt,
 				PRES_MAX_IV_LENGTH);
 			pf->key = _k_key_derive_simple1024(opt->pass,
-				pf->hdr.kdf_salt, PRES_KDF_ITERATIONS);
+				pf->hdr.kdf_salt, 128, PRES_KDF_ITERATIONS);
 			if (!pf->key)
 				goto err_out;
 			pf->scipher = _init_streamcipher(&pf->hdr);

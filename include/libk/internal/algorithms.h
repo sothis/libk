@@ -49,6 +49,12 @@ enum hashsum_e {
 	HASHSUM_MAX
 };
 
+enum kdf_e {
+	KDF_NOOP				= 0,
+	KDF_SKEIN_1024				= 1,
+	KDF_MAX
+};
+
 enum prng_e {
 	PRNG_NOOP				= 0,
 	PRNG_PLATFORM				= 1,
