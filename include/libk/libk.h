@@ -57,4 +57,8 @@ extern uint32_t k_version_patchlevel
 extern void* _k_key_derive_simple1024
 (const char* pass, void* salt, size_t salt_bytes, uint64_t iter);
 
+extern void* _k_key_derive_skein_1024
+(const char* pass, void* salt, size_t salt_bytes,
+size_t key_bytes, uint64_t iter);
+
 #endif /* _LIBK_H */
