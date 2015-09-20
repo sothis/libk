@@ -74,11 +74,7 @@ else ifeq ($(PLATFORM), Darwin)
 	PLAT_DARWIN	:= Yes
 	PLATFORM	:= DARWIN
 	SO_EXT		:= dylib
-else ifeq ($(PLATFORM), MINGW32_NT-6.1)
-	PLAT_WINNT	:= Yes
-	PLATFORM	:= WINNT
-	SO_EXT		:= dll
-else ifeq ($(PLATFORM), MINGW32_NT-6.2)
+else ifneq (,$(findstring MINGW,$(PLATFORM)))
 	PLAT_WINNT	:= Yes
 	PLATFORM	:= WINNT
 	SO_EXT		:= dll
