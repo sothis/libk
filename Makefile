@@ -42,13 +42,13 @@ ifeq ($(CLANGEXISTS), 0)
 endif
 ifeq ($(GCCEXISTS), 0)
 	HAVE_GCC	:= Yes
-ifneq ($(PLATFORM), MINGW32_NT-6.1)
+ifneq (,$(findstring MINGW,$(PLATFORM)))
 # TODO: write shellscript in order to get detailed compiler version information
 # and advanced testing possibilities (i.e. greater/less than, not just equality)
 	GCC_MAJOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
 		cut -d' ' -f3 | cut -d'.' -f1)
 	GCC_MINOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
-		cut -d' ' -f3 | cut -d'.' -f1)
+		cut -d' ' -f3 | cut -d'.' -f2)
 endif
 endif
 ifeq ($(ICCEXISTS), 0)
@@ -154,18 +154,7 @@ SRCBIN		+= ./src/ktool/main.c
 
 
 # preprocessor definitions
-ifdef RELEASE
-DEFINES		+= -DNDEBUG
-endif
 DEFINES		+= -D_GNU_SOURCE=1
-ifndef PLAT_DARWIN
-DEFINES		+= -D_POSIX_C_SOURCE=200809L
-endif
-ifdef PLAT_WINNT
-DEFINES		+= -D_CRT_RAND_S=1
-DEFINES		+= -D_WIN32=1
-DEFINES		+= -DWIN32=1
-endif
 DEFINES		+= -D_BSD_SOURCE=1
 DEFINES		+= -D_DEFAULT_SOURCE=1
 DEFINES		+= -D_FILE_OFFSET_BITS=64
@@ -176,6 +165,18 @@ DEFINES		+= -D__$(PLATFORM)__=1
 DEFINES		+= -DVERSION='"$(VERSION)"'
 DEFINES		+= -D__LIBRARY_BUILD=1
 DEFINES		+= -D__$(TOOLCHAIN)__=1
+ifdef RELEASE
+DEFINES		+= -DNDEBUG
+endif
+ifndef PLAT_DARWIN
+DEFINES		+= -D_POSIX_C_SOURCE=200809L
+endif
+ifdef PLAT_WINNT
+DEFINES		+= -D_CRT_RAND_S=1
+DEFINES		+= -D_WIN32=1
+DEFINES		+= -DWIN32=1
+endif
+
 
 # toolchain configuration
 
@@ -217,6 +218,31 @@ endif
 endif
 ifeq ($(GCC_MAJOR), 4)
 ifeq ($(GCC_MINOR), 6)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 4)
+ifeq ($(GCC_MINOR), 7)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 4)
+ifeq ($(GCC_MINOR), 8)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 4)
+ifeq ($(GCC_MINOR), 9)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 5)
+ifeq ($(GCC_MINOR), 0)
+CFLAGS		+= -flto -fuse-linker-plugin
+endif
+endif
+ifeq ($(GCC_MAJOR), 5)
+ifeq ($(GCC_MINOR), 1)
 CFLAGS		+= -flto -fuse-linker-plugin
 endif
 endif
