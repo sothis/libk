@@ -42,7 +42,7 @@ ifeq ($(CLANGEXISTS), 0)
 endif
 ifeq ($(GCCEXISTS), 0)
 	HAVE_GCC	:= Yes
-ifneq (,$(findstring MINGW,$(PLATFORM)))
+ifeq (,$(findstring MINGW,$(PLATFORM)))
 # TODO: write shellscript in order to get detailed compiler version information
 # and advanced testing possibilities (i.e. greater/less than, not just equality)
 	GCC_MAJOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
@@ -185,14 +185,7 @@ BUILDDIR	:= $(OUTDIR)/$(TOOLCHAIN)_$(CONF)
 
 # common flags
 CFLAGS		:= -Wall -g
-
-ifeq ($(TOOLCHAIN), gcc)
-ifeq ($(GCC_MAJOR), 4)
 CFLAGS		+= -fvisibility=hidden
-endif
-else
-CFLAGS		+= -fvisibility=hidden
-endif
 
 ifdef PLAT_DARWIN
 CFLAGS		+= -mmacosx-version-min=10.7
@@ -207,10 +200,13 @@ endif
 
 ifdef RELEASE
 CFLAGS		+= -O3
+
 ifdef PLAT_WINNT
 CFLAGS		+= -flto -fwhole-program
+
 else
 
+ifeq ($(TOOLCHAIN), gcc)
 ifeq ($(GCC_MAJOR), 4)
 ifeq ($(GCC_MINOR), 5)
 CFLAGS		+= -flto -fuse-linker-plugin
@@ -246,9 +242,12 @@ ifeq ($(GCC_MINOR), 1)
 CFLAGS		+= -flto -fuse-linker-plugin
 endif
 endif
+else
+endif # TOOLCHAIN == gcc
 
-endif
+endif #PLAT_WINNT
 endif #RELEASE
+
 CXXFLAGS	:= $(CFLAGS)
 
 # language dependent flags
