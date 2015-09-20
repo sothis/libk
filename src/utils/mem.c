@@ -34,7 +34,11 @@
 	} while(0)
 
 static long _pagesize;
+#ifndef __WINNT__
 static size_t _max_locked_mem;
+#else
+static SIZE_T _max_locked_mem;
+#endif
 
 
 __attribute__((constructor))
@@ -71,7 +75,7 @@ static void _init_mem_properties(void)
 	}
 	_max_locked_mem = rlp.rlim_cur;
 #else
-	size_t _min_locked_mem;
+	SIZE_T _min_locked_mem;
 
 	if (!GetProcessWorkingSetSize(GetCurrentProcess(),
 	&_min_locked_mem, &_max_locked_mem)) {
