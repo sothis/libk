@@ -1,0 +1,4 @@
+#!/bin/bash
+git remote set-url origin ssh://git@github.com/sothis/libk.git
+git checkout master
+
