@@ -1,9 +1,13 @@
 PROJECT_NAME	:= libk
+
+export PATH := /usr/local/musl/bin:$(PATH)
+
 VERSION		:= $(shell ./version)
 UNAMEEXISTS	:= $(shell uname > /dev/null 2>&1; echo $$?)
 PWDEXISTS	:= $(shell pwd > /dev/null 2>&1; echo $$?)
 GCCEXISTS	:= $(shell gcc --version > /dev/null 2>&1; echo $$?)
-CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
+MUSLEXISTS	:= $(shell musl-gcc --version > /dev/null 2>&1; echo $$?)
+#CLANGEXISTS	:= $(shell clang --version > /dev/null 2>&1; echo $$?)
 #ICCEXISTS	:= $(shell icc --version > /dev/null 2>&1; echo $$?)
 GITEXISTS	:= $(shell git --version > /dev/null 2>&1; echo $$?)
 TAREXISTS	:= $(shell tar --version > /dev/null 2>&1; echo $$?)
@@ -49,6 +53,9 @@ ifeq (,$(findstring MINGW,$(PLATFORM)))
 		cut -d' ' -f3 | cut -d'.' -f1)
 	GCC_MINOR	:= $(shell gcc --version 2>&1 | head -n 1 | \
 		cut -d' ' -f3 | cut -d'.' -f2)
+endif
+ifeq ($(MUSLEXISTS), 0)
+	HAVE_MUSLGCC	:= Yes
 endif
 endif
 ifeq ($(ICCEXISTS), 0)
@@ -301,6 +308,15 @@ ifeq ($(TOOLCHAIN), gcc)
 		LD	:= $(CROSS)g++
 	endif
 endif
+ifeq ($(TOOLCHAIN), muslgcc)
+	CC		:= musl-gcc
+	CXX		:= g++
+	ifeq ($(CXX_SRC),)
+		LD	:= musl-gcc
+	else
+		LD	:= g++
+	endif
+endif
 ifeq ($(TOOLCHAIN), clang)
 	CC		:= clang
 	CXX		:= clang++
@@ -359,6 +375,9 @@ clean:
 all-recursive:
 ifdef HAVE_GCC
 	$(MAKE) $(VERB) -C . TOOLCHAIN=gcc final-all-recursive
+endif
+ifdef HAVE_MUSLGCC
+	$(MAKE) $(VERB) -C . TOOLCHAIN=muslgcc final-all-recursive
 endif
 ifdef HAVE_CLANG
 	$(MAKE) $(VERB) -C . TOOLCHAIN=clang final-all-recursive
@@ -422,8 +441,13 @@ ifdef PLAT_DARWIN
 	$(LD) -Wl,-rpath,"@loader_path/" $(MACARCHS) $(LDFLAGS) \
 	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
 else
+ifeq ($(TOOLCHAIN), muslgcc)
+	@export LD_RUN_PATH='$${ORIGIN}' && $(LD) -static $(MACARCHS) \
+	$(LDFLAGS) $(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
+else
 	@export LD_RUN_PATH='$${ORIGIN}' && $(LD) $(MACARCHS) $(LDFLAGS) \
 	$(LPATH) $(FRAMEWORKS) -o $(@) $(^) $(LIBRARIES)
+endif
 endif
 
 

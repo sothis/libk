@@ -217,6 +217,9 @@ static int(*_ftw)(const char*, size_t) = 0;
 static int
 ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 {
+#if defined(__muslgcc__)
+	return -1;
+#else
 	/* only match regular files (hardlinks currently remain as copies) */
 	if (type != FTW_F)
 		return FTW_CONTINUE;
@@ -224,16 +227,21 @@ ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 		return FTW_CONTINUE;
 
 	return _ftw(path, ftw->base);
+#endif
 }
 
 __export_function int
 k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 {
+#if defined(__muslgcc__)
+	return -1;
+#else
 	int res = 0;
 	_ftw = ftw_fn;
 	/* stay within the same filesystem, do not follow symlinks */
 	res = nftw(path, ft_walk, 128, FTW_ACTIONRETVAL|FTW_MOUNT|FTW_PHYS);
 	return res;
+#endif
 }
 #endif
 

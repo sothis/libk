@@ -16,7 +16,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#ifdef __LINUX__
+#if defined(__LINUX__) && !defined(__muslgcc__)
 #include <execinfo.h>
 #endif
 
@@ -148,7 +148,7 @@ __export_function void set_kerrno_with_trace(kerror_t errnum)
 		errnum = -errnum;
 
 	kerrno = errnum;
-#ifdef __LINUX__
+#if defined(__LINUX__) && !defined(__muslgcc__)
 	void* return_addresses[2048];
 	int naddr = backtrace(return_addresses,
 		sizeof(return_addresses)/sizeof(void*));
