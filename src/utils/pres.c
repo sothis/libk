@@ -64,7 +64,7 @@ static int pres_unmap(struct mmap_t* res)
 	return munmap(res->mem - res->off, res->len);
 }
 
-int k_pres_rollback(struct pres_file_t* pf)
+__export_function int k_pres_rollback(struct pres_file_t* pf)
 {
 	if (ftruncate(pf->fd, pf->cur_rtbl_start)) {
 		return -1;
