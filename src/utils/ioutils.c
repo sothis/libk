@@ -212,8 +212,10 @@ k_ftw(const char* path, int(ftw_fn)(const char* path, size_t baseoff))
 #else
 
 /* TODO: make this threadlocal */
+__attribute__((unused))
 static int(*_ftw)(const char*, size_t) = 0;
 
+__attribute__((unused))
 static int
 ft_walk(const char* path, const struct stat* sb, int type, struct FTW* ftw)
 {
