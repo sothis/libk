@@ -27,6 +27,8 @@
 #endif
 
 #include <libk/libk.h>
+#include <utils/dumphx.h>
+#include <utils/xor.h>
 
 #ifndef __WINNT__
 static void __term_handler(int sig, siginfo_t* info, void* unused)
@@ -423,6 +425,207 @@ static void print_help(void)
 		"- print this\n");
 }
 
+
+void uci_block_reverse(unsigned char out[16], unsigned char in[16])
+{
+	out[0] = in[15];
+	out[1] = in[14];
+	out[2] = in[13];
+	out[3] = in[12];
+
+	out[4] = in[11];
+	out[5] = in[10];
+	out[6] = in[9];
+	out[7] = in[8];
+
+	out[8] = in[7];
+	out[9] = in[6];
+	out[10] = in[5];
+	out[11] = in[4];
+
+	out[12] = in[3];
+	out[13] = in[2];
+	out[14] = in[1];
+	out[15] = in[0];
+}
+
+void uci_blind(uint32_t addr, unsigned char aes_block[16])
+{
+	const uint32_t addr_mask = addr & 0xfffffff0;
+	uint32_t addr_blind[4];
+
+	addr_blind[0] = addr_mask + 0;
+	addr_blind[1] = addr_mask + 4;
+	addr_blind[2] = addr_mask + 8;
+	addr_blind[3] = addr_mask + 12;
+
+	xorb_64(aes_block, aes_block, addr_blind, 16);
+}
+
+void uci_encrypt(
+	const unsigned char key[16],
+	uint32_t addr,
+	unsigned char plain[16],
+	unsigned char cipher[16]
+) {
+	unsigned char temp[16];
+	k_bc_t* aes = k_bc_init(BLK_CIPHER_AES);
+	k_bc_set_encrypt_key(aes, key, 128);
+
+		uci_blind(addr, plain);
+
+		uci_block_reverse(temp, plain);
+		k_bc_encrypt(aes, temp, temp);
+		uci_block_reverse(cipher, temp);
+
+	k_bc_finish(aes);
+}
+
+void uci_decrypt(
+	const unsigned char key[16],
+	uint32_t addr,
+	unsigned char cipher[16],
+	unsigned char plain[16]
+) {
+	unsigned char temp[16];
+	k_bc_t* aes = k_bc_init(BLK_CIPHER_AES);
+	k_bc_set_decrypt_key(aes, key, 128);
+
+		uci_block_reverse(temp, cipher);
+		k_bc_decrypt(aes, temp, temp);
+		uci_block_reverse(plain, temp);
+
+		uci_blind(addr, plain);
+
+	k_bc_finish(aes);
+}
+
+void uci_mac(
+	const unsigned char key[16],
+	unsigned char input[16],
+	unsigned char truncated_mac[2]
+) {
+	unsigned char temp[16];
+	k_bc_t* aes = k_bc_init(BLK_CIPHER_AES);
+	k_bc_set_encrypt_key(aes, key, 128);
+
+		uci_block_reverse(temp, input);
+		k_bc_encrypt(aes, temp, temp);
+		uci_block_reverse(input, temp);
+
+		truncated_mac[0] = input[0];
+		truncated_mac[1] = input[1];
+
+	k_bc_finish(aes);
+}
+
+const unsigned char enc_key[] = {
+	0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+	0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+};
+
+const unsigned char int_key[] = {
+	0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+	0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+};
+
+const unsigned char uci_test_vector[] = {
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+	0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+
+	0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+	0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+
+	0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+	0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+
+	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+
+	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+
+	0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+	0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+
+	0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
+	0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+};
+
+void uci_calc_enc_block(const unsigned char key[16], uint32_t addr, unsigned char in[128], unsigned char out[128])
+{
+	for (uint32_t i = 0; i < 128; i += 16) {
+		uci_encrypt(key, addr + i, in + i, out + i);
+	}
+}
+
+void uci_calc_mac_block(const unsigned char key[16], unsigned char in[128], unsigned char out[16])
+{
+	for (uint32_t i = 0; i < 128; i += 16) {
+		uci_mac(key, in + i, out + (i/8));
+	}
+}
+
+static void run_uci_test(void)
+{
+	unsigned char mac_block[16];
+	unsigned char cipher_block[128];
+	unsigned char input[128];
+
+	memcpy(input, uci_test_vector, 128);
+
+	dumphx("test vector (p)", input, 128);
+	uci_calc_mac_block(int_key, input, mac_block);
+	dumphx("mac value (p)", mac_block, 16);
+
+	memcpy(input, uci_test_vector, 128);
+
+	uci_calc_enc_block(enc_key, 0x70000000, input, cipher_block);
+	dumphx("test vector (c)", cipher_block, 128);
+	uci_calc_mac_block(int_key, cipher_block, mac_block);
+	dumphx("mac value (c)", mac_block, 16);
+
+#if 0
+	uci_encrypt(enc_key, 0x70000000, plain0, buf0);
+	dumphx("encrypted", buf0, 16);
+
+	uci_mac(int_key, buf0, tmac);
+	dumphx("truncated mac", tmac, 2);
+
+	uci_decrypt(enc_key, 0x70000000, buf0, buf0);
+	dumphx("decrypted", buf0, 16);
+#endif
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int main(int argc, char* argv[], char* envp[])
 {
 	__init();
@@ -483,6 +686,10 @@ int main(int argc, char* argv[], char* envp[])
 	}
 	if (!strcmp(argv[1], "perf")) {
 		k_run_benchmarks(1);
+		return 0;
+	}
+	if (!strcmp(argv[1], "uci")) {
+		run_uci_test();
 		return 0;
 	}
 	if (!strcmp(argv[1], "version")) {
